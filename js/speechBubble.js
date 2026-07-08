@@ -171,6 +171,7 @@ export class SpeechBubble {
     const obj = this.element;
     // Kamera + Bubble in den KARTEN-Frame transformieren (MindAR-Anpassung)
     const camL = this.frame.getCamLocal(_v1);
+    if (!camL) return; // NaN-Schutz: kaputter Frame → Ausrichtung halten
     obj.getWorldPosition(_v2);
     const objL = this.frame.toLocal(_v2);
     const worldYaw = Math.atan2(camL.x - objL.x, camL.z - objL.z);

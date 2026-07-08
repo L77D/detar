@@ -73,16 +73,32 @@ export const SCENE = {
   debug: false,       // pinke Debug-Overlays (auch per ?debug in der URL)
 };
 
-// MindAR-Tracking-Glättung (ersetzt den Zapworks-PoseStabilizer — MindAR hat
-// den One-Euro-Filter bereits EINGEBAUT, hier nur die Schrauben).
-// Faustregel wie beim PoseStabilizer: erst filterMinCF runter, bis das
-// Ruhe-Zittern weg ist, dann filterBeta hoch, bis schnelle Bewegung ohne
-// Nachziehen folgt — nur eine Schraube pro Test.
+// Tracking-Glättung. ZWEI Stufen:
+// (a) MindARs eingebauter One-Euro-Filter (filterMinCF/filterBeta) — Rohsignal.
+// (b) UNSER PoseStabilizer (js/poseStabilizer.js, Port des in Zapworks
+//     verifizierten Filters): One-Euro-Position + SLERP-Rotation + Dead-Zone
+//     + Lost-Hold zwischen Anchor und Figur. Das ist die Haupt-Glättung.
+// Faustregel: erst minCutoff runter, bis das Ruhe-Zittern weg ist, dann beta
+// hoch, bis schnelle Bewegung ohne Nachziehen folgt — EINE Schraube pro Test.
+// Einheiten-Hinweis: Positionen sind in MindAR-Einheiten (Kartenbreite = 1),
+// ~10× größer als die Zapworks-Meter — beta/posDeadZone sind daher anders
+// skaliert als die alten PoseStabilizer.ts-Werte.
 export const STAB = {
-  filterMinCF: 0.001,   // MindAR-Default 0.001 — kleiner = ruhiger in Ruhe
-  filterBeta: 1000,     // MindAR-Default 1000  — größer = schneller bei Bewegung
-  missTolerance: 5,     // Frames "Karte kurz verloren" aushalten (Lost-Hold)
+  // (a) MindAR-eingebauter Filter (Rohsignal, Defaults belassen)
+  filterMinCF: 0.001,
+  filterBeta: 1000,
+  missTolerance: 5,     // Frames "Karte kurz verloren" aushalten
   warmupTolerance: 5,   // Frames bis "Karte gefunden" gemeldet wird
+
+  // (b) PoseStabilizer — Haupt-Glättung
+  minCutoff: 1.0,       // Grund-Glättung in Ruhe. KLEINER = ruhiger, aber träger
+  beta: 0.0015,         // wie stark Bewegung die Glättung löst. GRÖSSER = wacher
+  dCutoff: 1.0,         // Glättung der Geschwindigkeitsschätzung (selten anfassen)
+  rotLerp: 0.35,        // SLERP-Faktor pro Frame @60Hz. KLEINER = ruhiger/träger
+  posDeadZone: 0.0015,  // darunter kein Positions-Update → Figur steht 100% still
+  rotDeadZone: 0.0015,  // dito Rotation (Radiant)
+  lostHoldMs: 250,      // letzte gute Pose so lange halten, bevor ausgeblendet
+  refHz: 60,
 };
 
 const ALL = { TYPO, FACE, IDLE, ACT, CHOREO, SCENE, STAB };

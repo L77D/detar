@@ -31,6 +31,7 @@ import { ActivationAnim } from "./activationAnim.js";
 import { QuestionMenu } from "./questionMenu.js";
 import { CardController } from "./cardController.js";
 import { DebugOverlay } from "./debugOverlay.js";
+import { PoseStabilizer } from "./poseStabilizer.js";
 
 const params = new URLSearchParams(location.search);
 const DESKTOP_MODE = params.has("desktop");
@@ -82,17 +83,22 @@ function showStartError(err) {
 /* --------------------------------------------------------------------------
    Gemeinsamer Szenen-Aufbau (Rig + Behaviors + UI + Loop) für beide Modi.
    -------------------------------------------------------------------------- */
-function buildExperience({ renderer, scene, camera, worldRoot }) {
+function buildExperience({ renderer, scene, camera, worldRoot, isRunning, preTick }) {
   const frame = {
     worldRoot,
     camera,
     /* Kamera-Weltposition in den Karten-Frame transformieren. WICHTIG:
        updateWorldMatrix VOR dem Lesen — matrixWorld ist im Animation-Loop
-       sonst einen Frame alt (Zapworks-Gotcha, gilt in three.js generell). */
+       sonst einen Frame alt (Zapworks-Gotcha, gilt in three.js generell).
+       NaN-SCHUTZ: liefert null, wenn die Transformation nicht endlich ist
+       (degenerierte Matrix um Tracking-Verlust) — Aufrufer überspringen den
+       Frame dann, statt NaN in ihre Lerps einsickern zu lassen. */
     getCamLocal(out) {
       camera.getWorldPosition(out);
       worldRoot.updateWorldMatrix(true, false);
-      return worldRoot.worldToLocal(out);
+      worldRoot.worldToLocal(out);
+      if (!Number.isFinite(out.x) || !Number.isFinite(out.y) || !Number.isFinite(out.z)) return null;
+      return out;
     },
     /* Welt → Karten-Frame (matrixWorld muss aktuell sein — getCamLocal wird
        in allen Verwendungen zuerst gerufen und aktualisiert sie). */
@@ -169,12 +175,15 @@ function buildExperience({ renderer, scene, camera, worldRoot }) {
     const now = performance.now();
     const dt = (now - lastT) / 1000;
     lastT = now;
-    wander.tick(dt);
-    tickFigureJump(dt); // nach wander: überschreibt die Position während des Sprungs
-    activation.tick(dt);
-    faceAnim.tick(dt);
-    bubble.tick(dt);
-    debug?.tick();
+    preTick?.(); // AR: PoseStabilizer (glättet Anchor-Pose → stabRoot)
+    if (!isRunning || isRunning()) {
+      wander.tick(dt);
+      tickFigureJump(dt); // nach wander: überschreibt die Position während des Sprungs
+      activation.tick(dt);
+      faceAnim.tick(dt);
+      bubble.tick(dt);
+      debug?.tick();
+    }
     renderer.render(scene, camera);
   }
 
@@ -182,8 +191,12 @@ function buildExperience({ renderer, scene, camera, worldRoot }) {
 }
 
 /* --------------------------------------------------------------------------
-   AR-Modus (MindAR). Tracking-Glättung: MindARs EINGEBAUTER One-Euro-Filter
-   (STAB.filterMinCF / filterBeta) ersetzt den Zapworks-PoseStabilizer.
+   AR-Modus (MindAR). Tracking-Glättung: eigener PoseStabilizer (One-Euro +
+   SLERP + Dead-Zone + Lost-Hold) zwischen Anchor und Figur — die Figur hängt
+   NICHT unter anchor.group, sondern unter stabRoot (Szenen-Ebene); der
+   Stabilizer kopiert die Anchor-Pose geglättet rüber und steuert auch die
+   Sichtbarkeit. Zusätzlich NaN-Schutz: kaputte Frames (degenerierte Matrizen
+   um Tracking-Verlust) werden verworfen, Behavior-Ticks pausieren bei Verlust.
    -------------------------------------------------------------------------- */
 async function startAR() {
   const { MindARThree } = await import("mindar-image-three");
@@ -200,21 +213,34 @@ async function startAR() {
   const { renderer, scene, camera } = mindarThree;
   const anchor = mindarThree.addAnchor(0);
 
-  // Karten-Frame unter dem Anchor: X = rechts, Y = hoch von der Karte,
+  // Geglätteter Träger auf Szenen-Ebene (anchor.group bleibt leer)
+  const stabRoot = new THREE.Group();
+  scene.add(stabRoot);
+  const stab = new PoseStabilizer(anchor.group, stabRoot);
+
+  // Karten-Frame unter dem stabRoot: X = rechts, Y = hoch von der Karte,
   // Z = zur Karten-Unterkante. (+90° X: Anchor-Z "aus dem Bild" wird zu Y.)
   const worldRoot = new THREE.Group();
   worldRoot.rotation.x = Math.PI / 2;
   worldRoot.scale.setScalar(1 / SCENE.cardWidth);
-  anchor.group.add(worldRoot);
+  stabRoot.add(worldRoot);
 
-  const { controller, loop } = buildExperience({ renderer, scene, camera, worldRoot });
+  const { controller, loop } = buildExperience({
+    renderer, scene, camera, worldRoot,
+    /* Behavior-Ticks nur, solange die Figur sichtbar ist — verhindert, dass
+       Lost-Frames (NaN-Quelle) in die Zustands-Lerps einsickern. */
+    isRunning: () => stabRoot.visible,
+    preTick: () => stab.tick(),
+  });
 
   const hint = el("trackingHint");
   anchor.onTargetFound = () => {
     hint.style.display = "none";
+    stab.onFound();
     controller.onCardSeen(); // greeted-Flag: Choreographie nur beim ersten Mal
   };
   anchor.onTargetLost = () => {
+    stab.onLost();
     if (controller.greeted) {
       hint.textContent = "Karte wieder ins Bild nehmen";
       hint.style.display = "block";

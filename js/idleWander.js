@@ -183,6 +183,7 @@ export class IdleWander {
   }
   computeHeadingTowardCamera() {
     const camL = this.frame.getCamLocal(_camL);
+    if (!camL) return null; // NaN-Schutz: kaputter Frame → kein Update
     const selfPos = this.element.position; // lokal im Karten-Frame
     return Math.atan2(camL.x - selfPos.x, camL.z - selfPos.z);
   }
@@ -219,6 +220,7 @@ export class IdleWander {
   }
   computeHeadPitchTowardCamera() {
     const camL = this.frame.getCamLocal(_camL);
+    if (!camL) return this.headBaseRotX; // NaN-Schutz
     this.nodes.HeadNod.getWorldPosition(_headW);
     const headL = this.frame.toLocal(_headW);
     const dy = camL.y - headL.y;
@@ -239,6 +241,7 @@ export class IdleWander {
   }
   computeHeadTowardCamera() {
     const camL = this.frame.getCamLocal(_camL);
+    if (!camL) return this.headBaseRotY; // NaN-Schutz
     this.nodes.HeadPivot.getWorldPosition(_headW);
     const headL = this.frame.toLocal(_headW);
     const worldYaw = Math.atan2(camL.x - headL.x, camL.z - headL.z);

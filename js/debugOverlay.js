@@ -73,6 +73,7 @@ export class DebugOverlay {
     const fz = FigureRoot.position.z;
     const y2 = 0.002;
     const camL = this.frame.getCamLocal(_dbgV);
+    if (!camL) return; // NaN-Schutz
     const camH = Math.atan2(camL.x - fx, camL.z - fz);
     const thr = (IDLE.cameraFacingThreshold * Math.PI) / 180;
     const r = Math.max(halfW, halfH) * 1.8;
