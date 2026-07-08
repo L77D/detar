@@ -1,0 +1,65 @@
+{
+  "TYPO": {
+    "fontFamily": "\"Jersey 10\", monospace",
+    "fontWeight": "normal",
+    "fontSize": 52,
+    "lineSpacing": 0.8,
+    "textColor": "#ffffff",
+    "strokeColor": "#000000",
+    "strokeWidth": 8,
+    "paddingPx": 28,
+    "maxLines": 5,
+    "maxWidth": 1.2,
+    "unitsPerPx": 0.002,
+    "offsetX": 0,
+    "offsetY": -0.17,
+    "msPerChar": 28
+  },
+  "FACE": {
+    "blinkIntervalMin": 2,
+    "blinkIntervalMax": 5,
+    "blinkDuration": 0.12,
+    "talkFrameMs": 150
+  },
+  "IDLE": {
+    "markerWidth": 0.09,
+    "markerHeight": 0.125,
+    "roamFraction": 0.8,
+    "bopAmplitude": 0.015,
+    "bopFrequency": 0.5,
+    "walkSpeed": 0.04,
+    "walkFrequency": 2.2,
+    "walkRollMax": 0.18,
+    "stepSquash": 0.05,
+    "headLookMax": 0.5,
+    "headPitchMax": 0.35,
+    "bopHoldMin": 1.5,
+    "bopHoldMax": 3.5,
+    "actionMin": 1.2,
+    "actionMax": 2.4,
+    "cameraFacingThreshold": 45,
+    "faceCamLerp": 0.12,
+    "lookChance": 0.6,
+    "walkChance": 0.4
+  },
+  "ACT": {
+    "durationSec": 1.55,
+    "spins": 2,
+    "overshoot": 1.75
+  },
+  "CHOREO": {
+    "uiRevealMs": 1000,
+    "revealOffset": 60,
+    "idleReturnMs": 5500,
+    "greetingPose": "idle",
+    "billboardLerp": 0.2,
+    "jumpDurationSec": 0.45,
+    "jumpHeight": 0.04
+  },
+  "SCENE": {
+    "cardWidth": 0.095,
+    "bgColor": "#9a9a9a",
+    "headNodAxis": 0.25,
+    "debug": false
+  }
+}

@@ -1,0 +1,390 @@
+/* =============================================================================
+   DETAR — Bottom-UI Frage-Menü + Onboarding + Reveal.
+   1:1 aus dem Lokal-Prototyp (Stand 2026-07-06). Font-Face liegt in app.css.
+   ============================================================================= */
+
+:root {
+  /* --- Schrift ------------------------------------------------------------ */
+  --q-font:            "Jersey 10", monospace; /* Pixel-Type; Fallback mono */
+  --q-font-size:       24px;   /* Button-Schriftgröße (normal) */
+  --q-font-size-sm:    22px;   /* Schriftgröße auf kleinen Phones (<380px) */
+  --q-line-height:     0.9;
+  --q-letter-spacing:  0.3;
+  --q-text-color:      #1a1a1a;
+
+  /* --- Farben ------------------------------------------------------------- */
+  --q-bg:              #ffdd00; /* Mockup-Gelb (normal) */
+  --q-bg-selected:     #39ff14; /* Neon-Grün (ausgewählt) */
+  --q-outline:         #111;    /* dicke schwarze Outline + Schatten */
+
+  /* --- Box-Form ----------------------------------------------------------- */
+  --q-border-width:    4px;
+  --q-radius:          14px;
+  --q-shadow-depth:    5px;    /* Höhe des harten Retro-Schattens (normal) */
+  --q-pad-y:           16px;   /* Innenabstand oben/unten */
+  --q-pad-x:           18px;   /* Innenabstand links/rechts */
+  --q-pad-y-sm:        14px;   /* Innenabstand auf kleinen Phones */
+  --q-pad-x-sm:        14px;
+
+  /* --- Ausgewählt-Zustand ------------------------------------------------- */
+  --q-sel-scale:       1.12;   /* wie viel größer beim Auswählen */
+  --q-sel-lift:        -10px;  /* wie weit nach oben gehoben (negativ = hoch) */
+  --q-sel-shadow:      8px;    /* Schatten-Höhe im angehobenen Zustand */
+
+  /* --- Layout / Karussell ------------------------------------------------- */
+  --q-gap:             12px;   /* Abstand zwischen den Boxen */
+  --q-menu-pad:        0px;    /* Außenabstand rechts/unten des Containers */
+  --q-menu-pad-left:   28px;   /* Außenabstand LINKS – größer, damit die ausgewählte
+                                  (skalierte + gedrehte) erste Box nicht rausragt */
+  --q-menu-pad-top:    10px;   /* Panel-Padding OBEN – steuert, wie weit das
+                                  Muster/Panel nach oben reicht (Panel-Höhe) */
+  --q-hub-space:       22px;   /* Platz INNERHALB des scrollenden Karussells über/
+                                  unter den Boxen, damit der angehobene + skalierte
+                                  ausgewählte Button nicht abgeschnitten wird
+                                  (overflow-y: hidden). Hochsetzen falls oben gekappt. */
+  --q-edge-pad-right:  4px;    /* Mini-Rand NACH letzter Karte (schmaler = Peek-Effekt) */
+
+  /* --- Animation --------------------------------------------------------- */
+  --q-bounce:          cubic-bezier(0.34, 1.56, 0.64, 1); /* Federn beim Auswählen */
+  --q-bounce-time:     0.18s;
+
+  /* --- Titelzeile ("Wähle eine Frage") ----------------------------------- */
+  --q-title-text:      "Wähle eine Frage"; /* nur Doku – echter Text steht in QuestionMenu.ts */
+  --q-title-font-size: 26px;
+  --q-title-color:     #ffdd00; /* gelbe Schrift */
+  --q-title-bg:        #111;    /* schwarzer Kasten */
+  --q-title-pad-y:     8px;
+  --q-title-pad-x:     16px;
+  --q-title-radius:    4px;
+  --q-title-gap:       -10px;   /* Abstand Titel -> Fragen-Karussell */
+
+  /* --- Onboarding (Instruktion vor dem ersten Scan) ---------------------- */
+  --q-intro-font-size: 26px;   /* Schriftgröße der 3-Schritte-Zeilen */
+  --q-intro-color:     #ffdd00; /* gelbe Schrift (wie Titel) */
+  --q-intro-bg:        #111;    /* schwarzer Kasten */
+  --q-intro-pad-y:     14px;
+  --q-intro-pad-x:     18px;
+  --q-intro-radius:    8px;
+  --q-intro-line-gap:  6px;     /* Abstand zwischen den 3 Zeilen */
+
+  /* --- Reveal-Animation (Menü fährt beim ersten Scan rein) --------------- */
+  /* WICHTIG: --q-reveal-time muss mit UI_REVEAL_MS in CardController.ts
+     übereinstimmen — der Controller wartet diese Zeit ab, BEVOR die Figur-
+     Intro startet (UI fährt zuerst komplett rein, dann ploppt die Figur). */
+  --q-reveal-time:     1.0s;    /* Dauer des Einfahrens (verdoppelt: langsamer) */
+  --q-reveal-ease:     cubic-bezier(0.16, 1, 0.3, 1); /* ease-out (sanft auslaufend) */
+  --q-reveal-offset:   60px;    /* wie weit unten es startet, bevor es hochfährt */
+
+  /* --- Hintergrund-Muster (versetztes QUADRAT-Raster) -------------------- */
+  /* Alle drei live steuerbar (Muster liegt in .detar-panel::before als
+     SVG-Maske; Farbe kommt aus background-color, Größe/Abstand aus mask). */
+  --q-bg-tint:         rgba(120, 120, 120, 0.0); /* Panel-Grund (0 = voll transparent,
+                                                     AR-Kamera scheint durch) */
+  --q-dot-color:       #000000; /* Farbe der Quadrat-Punkte */
+  --q-dot-gap:         18px;    /* Kachelabstand (Rasterweite) */
+  --q-dot-size:        3px;     /* DOKU/Richtwert der Punktgröße. Effektive Größe
+                                   = --q-dot-gap / 6 (= viewBox 6, rect 1 in der
+                                   Maske). Für ein anderes Verhältnis die rect-
+                                   bzw. viewBox-Zahl in .detar-panel::before --dot-mask
+                                   ändern (z.B. rect 1 / viewBox 9 = dünner). */
+}
+
+/* ===========================================================================
+   DETAR – Bottom-UI Frage-Menü
+   Mockup-Stil: gelb, dicke schwarze Outline, Pixel/Retro-Type.
+   2D-Overlay am unteren Bildschirmrand (anchor3D = false).
+
+   Karussell-Layout: horizontal, native CSS-Scroll-Snap.
+   Erste Frage startet ganz links (Container scrollt von scrollLeft = 0),
+   nachfolgende Fragen ragen rechts an (Peek-Vorschau) und können nach
+   links geswipt werden. Kein JS für die Swipe-Geste nötig – der Browser
+   übernimmt Touch, Trägheit und Einrasten komplett nativ.
+   =========================================================================== */
+
+/* Äußeres Panel: trägt das Hintergrund-Muster + die Titelzeile und umschließt
+   das (horizontal scrollende) Karussell. Der Titel darf NICHT mitscrollen,
+   deshalb sitzt er hier außerhalb von .detar-menu (das hat overflow-x). */
+.detar-panel {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+
+  /* Halbtransparenter Panel-Grund (AR-Kamera scheint durch). Das QUADRAT-
+     Muster liegt im ::before darüber (siehe unten) – getrennt, damit es
+     komplett über das Dashboard steuerbar bleibt. */
+  background-color: var(--q-bg-tint);
+
+  /* Innenabstand des Panels (oben Platz für den Auswahl-Hub der Boxen). */
+  padding-top: var(--q-menu-pad-top);
+  padding-bottom: calc(var(--q-menu-pad) + env(safe-area-inset-bottom));
+
+  pointer-events: auto;
+}
+
+/* Versetztes QUADRAT-Raster als eigene Ebene über dem Panel-Grund.
+   Technik: das ::before ist eine VOLLFLÄCHE in --q-dot-color, die per CSS-mask
+   zu einem Quadrat-Raster ausgestanzt wird. Die Maske ist ein gekacheltes
+   inline-SVG mit einem <rect> (Rechteck = immer scharfkantig, kein Kreis).
+   Im MASKE-SVG ist nur die FORM relevant (schwarz/weiß), nicht die Farbe –
+   die echte Punktfarbe kommt aus background-color: var(--q-dot-color). Damit
+   sind Farbe + Größe + Abstand wieder voll dashboard-steuerbar:
+     --q-dot-color -> background-color des ::before (= Punktfarbe)
+     --q-dot-gap   -> mask-size (Kachelabstand)
+     --q-dot-size  -> Punktgröße: relativ über das viewBox-Verhältnis im SVG
+                      (rect ist 1 von 6 Einheiten -> Punkt = gap/6; für andere
+                      Verhältnisse die "1" im rect bzw. die "6" im viewBox ändern).
+   Zwei Lagen, die zweite um die halbe Kachel versetzt -> Quadrat-in-Lücke. */
+.detar-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;          /* Muster ganz hinten – Titel + Fragen liegen davor */
+  pointer-events: none;
+
+  /* DAS ist die Punktfarbe – frei im Dashboard. */
+  background-color: var(--q-dot-color);
+
+  /* Maske: viewBox 6×6, rect 1×1 in der Ecke -> Punkt = 1/6 der Kachel.
+     fill muss undurchsichtig sein (Form), Farbe egal -> schwarz. */
+  --dot-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 6 6'%3E%3Crect width='1' height='1' fill='black'/%3E%3C/svg%3E");
+  -webkit-mask-image: var(--dot-mask), var(--dot-mask);
+  mask-image: var(--dot-mask), var(--dot-mask);
+  -webkit-mask-repeat: repeat, repeat;
+  mask-repeat: repeat, repeat;
+  /* Kachelabstand = --q-dot-gap (frei im Dashboard). */
+  -webkit-mask-size: var(--q-dot-gap) var(--q-dot-gap);
+  mask-size: var(--q-dot-gap) var(--q-dot-gap);
+  /* Zweite Lage um die halbe Kachel versetzt -> Quadrat-in-Lücke. */
+  -webkit-mask-position: 0 0, calc(var(--q-dot-gap) / 2) calc(var(--q-dot-gap) / 2);
+  mask-position: 0 0, calc(var(--q-dot-gap) / 2) calc(var(--q-dot-gap) / 2);
+}
+
+/* Titelzeile "Wähle eine Frage" – schwarzer Kasten, gelbe Pixel-Schrift.
+   Linksbündig mit dem ersten Frage-Button (gleicher linker Einzug). */
+.detar-title {
+  position: relative;
+  z-index: 1;          /* vor dem Muster (::before, z-index 0) */
+  align-self: flex-start;
+  margin-left: var(--q-menu-pad-left);
+  margin-bottom: var(--q-title-gap);
+
+  font-family: var(--q-font);
+  font-size: var(--q-title-font-size);
+  letter-spacing: var(--q-letter-spacing);
+  color: var(--q-title-color);
+  background: var(--q-title-bg);
+  padding: var(--q-title-pad-y) var(--q-title-pad-x);
+  border-radius: var(--q-title-radius);
+  user-select: none;
+  white-space: nowrap;
+}
+
+.detar-menu {
+  position: relative;
+  z-index: 1;          /* Fragen-Karussell vor dem Muster (::before, z-index 0) */
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;   /* Karten NICHT umbrechen lassen – sonst "übereinander" trotz row */
+  gap: var(--q-gap);
+  /* center statt stretch: 2- und 3-zeilige Boxen behalten ihre natürliche
+     Höhe und werden vertikal zueinander zentriert (gleiche Mitte). Nur die
+     BREITE bleibt gleich (über das Flex-Verhältnis der Buttons), nicht die Höhe. */
+  align-items: center;
+
+  /* WICHTIG: .detar-menu ist ein SELBST eingefügtes Kind-Div innerhalb von
+     Mattercrafts Wrapper (root trägt dessen "zcomponent-align..."-Klassen –
+     siehe QuestionMenu.ts-Kommentar). Wir überschreiben den Wrapper NICHT
+     (das kollidierte mit Mattercrafts Re-Renders) – stattdessen nimmt unser
+     Container die volle Breite SEINES Elternelements ein. Falls der Wrapper
+     selbst zu schmal bleibt (im Test: 435px fest), muss DAS separat behoben
+     werden (Wrapper-Breite), nicht hier am Kind. */
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  /* Seitliches Padding: links Extra-Platz, damit die ausgewählte (skalierte +
+     gedrehte) erste Box nicht rausragt. Oben/unten = --q-hub-space, damit der
+     angehobene + vergrößerte ausgewählte Button NICHT vom overflow-y: hidden
+     abgeschnitten wird (das war das "oben abgeschnitten"-Symptom). */
+  padding-top: var(--q-hub-space);
+  padding-right: var(--q-menu-pad);
+  padding-bottom: var(--q-hub-space);
+  padding-left: var(--q-menu-pad-left);
+  box-sizing: border-box;
+
+  /* Horizontales Scrollen mit nativem Snap. */
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch; /* iOS-Trägheit */
+  scrollbar-width: none;             /* Firefox: Scrollbar ausblenden */
+
+  /* WICHTIG: Der Container selbst muss Touch-Events empfangen dürfen, sonst
+     kann der Browser hier kein horizontales Scrollen auslösen – die Geste
+     würde an ein darüberliegendes Element durchgereicht und dort als
+     Vertikal-Scroll interpretiert (Symptom: "lässt sich nach oben schieben,
+     aber nicht horizontal swipen"). touch-action: pan-x sagt dem Browser:
+     horizontales Pannen hier selbst übernehmen, vertikales NICHT binden. */
+  pointer-events: auto;
+  touch-action: pan-x;
+}
+
+/* Scrollbar in WebKit/Blink ausblenden (Chrome, Safari) – rein optisch,
+   Scroll-Funktion bleibt erhalten. */
+.detar-menu::-webkit-scrollbar {
+  display: none;
+}
+
+/* Mini-Spacer NACH der letzten Karte, damit sie vollständig einrasten kann
+   (sonst bliebe sie hinter dem rechten Viewport-Rand "stecken").
+   Den linken Abstand übernimmt jetzt padding-left am .detar-menu – ein
+   Pseudo-Spacer half NICHT gegen das Symptom, weil das scale()/rotate() der
+   ausgewählten Box über die Box-Grenze hinaus zeichnet und vom Container-
+   overflow abgeschnitten wird; echtes padding gibt dem Transform Platz. */
+.detar-menu::after {
+  content: "";
+  flex: 0 0 var(--q-edge-pad-right);
+}
+
+/* Paar-Wrapper = das eigentliche Snap-Ziel ("2 sichtbar pro View").
+   Zwei Karten pro Paar, das Paar selbst rastet ein -> Swipe blättert von
+   Paar zu Paar (1+2, 3+4, ...) statt Karte für Karte. Letztes Paar darf
+   auch nur 1 Karte enthalten (ungerade Fragenzahl) – flex regelt das. */
+.detar-q-pair {
+  display: flex;
+  flex-direction: row;
+  flex: 0 0 auto;
+  gap: var(--q-gap);
+
+  width: 100%;
+  /* center: Boxen unterschiedlicher Höhe (2 vs 3 Zeilen) treffen sich auf
+     gleicher Mitte, statt auf gleiche Höhe gestreckt zu werden. */
+  align-items: center;
+  scroll-snap-align: start;
+  scroll-snap-stop: always; /* nicht über Paare hinweg "durchschnellen" */
+}
+
+.detar-q-btn {
+  pointer-events: auto; /* Buttons selbst sind klickbar */
+
+  /* Zwei Karten pro Paar nebeneinander: je ~50% der Paar-Breite minus Gap. */
+  flex: 1 1 0;
+  min-width: 0; /* erlaubt Schrumpfen unter den Inhalts-Mindestbreiten */
+
+  /* Box behält ihre natürliche Höhe (2 vs 3 Zeilen) und wird zentriert. */
+  align-self: center;
+
+  font-family: var(--q-font);
+  font-size: var(--q-font-size);
+  line-height: var(--q-line-height);
+  letter-spacing: var(--q-letter-spacing);
+  text-align: center;
+  color: var(--q-text-color);
+
+  background: var(--q-bg);
+  border: var(--q-border-width) solid var(--q-outline);
+  border-radius: var(--q-radius);
+  box-shadow: 0 var(--q-shadow-depth) 0 var(--q-outline); /* harter Retro-Schatten, kein Blur */
+
+  padding: var(--q-pad-y) var(--q-pad-x);
+  cursor: pointer;
+  user-select: none;
+
+  /* Frecher Look: jede Box leicht aus ihrer Mitte gedreht. --tilt wird pro
+     Button von QuestionMenu.ts gesetzt (zufällig ±1–2°). --lift/--scale
+     steuern den Ausgewählt-Zustand (Default 0 / 1), siehe .selected unten. */
+  --tilt: 0deg;
+  --lift: 0px;
+  --scale: 1;
+  transform-origin: center center;
+  transform: translateY(var(--lift)) scale(var(--scale)) rotate(var(--tilt));
+  transition: transform var(--q-bounce-time) var(--q-bounce),
+              box-shadow 0.12s ease,
+              background 0.12s ease;
+}
+
+.detar-q-btn:active {
+  /* "gedrückt" – Schatten verschwindet, Drehung bleibt erhalten. */
+  transform: translateY(4px) rotate(var(--tilt));
+  box-shadow: 0 1px 0 var(--q-outline);
+}
+
+/* Ausgewählt-Zustand: größer, neon-grün, leicht nach oben gehoben.
+   Drehung bleibt erhalten (frecher Look). */
+.detar-q-btn.selected {
+  --lift: var(--q-sel-lift);
+  --scale: var(--q-sel-scale);
+  background: var(--q-bg-selected);
+  box-shadow: 0 var(--q-sel-shadow) 0 var(--q-outline);
+}
+
+/* Beim Anheben darf :active die Drehung/Hebung nicht zurücksetzen. */
+.detar-q-btn.selected:active {
+  transform: translateY(calc(var(--lift) + 4px)) scale(var(--scale)) rotate(var(--tilt));
+  box-shadow: 0 4px 0 var(--q-outline);
+}
+
+/* Dezent kompaktere Darstellung auf kleinen Phones. */
+@media (max-width: 380px) {
+  .detar-q-btn {
+    font-size: var(--q-font-size-sm);
+    padding: var(--q-pad-y-sm) var(--q-pad-x-sm);
+  }
+}
+
+/* ===========================================================================
+   ONBOARDING + REVEAL
+   Vor dem ersten Scan zeigt das Panel nur die 3-Schritte-Instruktion
+   (.detar-panel--onboarding). Beim ersten Scan wird sie ausgetauscht und
+   das echte Fragen-Menü fährt mit ease-out rein (.detar-panel--reveal ->
+   --reveal-in). Beide nutzen denselben .detar-panel-Wrapper (gleiches
+   Hintergrund-Muster), nur der Inhalt + die Animation unterscheiden sich.
+   =========================================================================== */
+
+/* Onboarding-Block: 3 Schritte untereinander, linksbündig wie der Titel. */
+.detar-intro {
+  position: relative;
+  z-index: 1;                 /* vor dem Muster (::before, z-index 0) */
+  align-self: flex-start;
+  margin-left: var(--q-menu-pad-left);
+  margin-right: var(--q-menu-pad-left);
+  margin-top: var(--q-hub-space);
+  margin-bottom: var(--q-hub-space);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--q-intro-line-gap);
+
+  font-family: var(--q-font);
+  font-size: var(--q-intro-font-size);
+  letter-spacing: var(--q-letter-spacing);
+  color: var(--q-intro-color);
+  user-select: none;
+}
+
+/* Jede Schritt-Zeile als eigener schwarzer Kasten (eng am Text). */
+.detar-intro-line {
+  display: inline-block;
+  align-self: flex-start;     /* Kasten umschließt nur den Text, nicht volle Breite */
+  background: var(--q-intro-bg);
+  padding: var(--q-intro-pad-y) var(--q-intro-pad-x);
+  border-radius: var(--q-intro-radius);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* Reveal-Startzustand: Panel sitzt etwas tiefer + ist transparent. */
+.detar-panel--reveal {
+  transform: translateY(var(--q-reveal-offset));
+  opacity: 0;
+  transition: transform var(--q-reveal-time) var(--q-reveal-ease),
+              opacity var(--q-reveal-time) var(--q-reveal-ease);
+}
+
+/* Reveal-Endzustand: an seiner Position, voll sichtbar (ease-out dorthin). */
+.detar-panel--reveal.detar-panel--reveal-in {
+  transform: translateY(0);
+  opacity: 1;
+}

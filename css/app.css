@@ -1,0 +1,274 @@
+/* =============================================================================
+   DETAR — App-Grundgerüst: Font, Vollbild-AR-Container, Splash-Screen,
+   DET-Logo-Overlay, Tracking-Hinweis. Design spiegelt question-menu.css
+   (gelb / schwarz / Jersey 10 / Punktraster).
+   ============================================================================= */
+
+@font-face {
+  font-family: "Jersey 10";
+  src: url("../assets/fonts/Jersey10-Regular.ttf") format("truetype");
+  font-display: block;
+}
+
+:root {
+  --s-font:          "Jersey 10", monospace;
+  --s-yellow:        #ffdd00;
+  --s-outline:       #111;
+  --s-bg:            #3a3b34;
+  --s-text-light:    #ffffff;
+  --s-border-width:  4px;
+  --s-radius:        14px;
+  --s-shadow-depth:  6px;
+  --s-dot-color:     rgba(0, 0, 0, 1);
+  --s-dot-gap:       22px;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  font-family: var(--s-font);
+  background: #000;
+  touch-action: manipulation;      /* kein Doppeltipp-Zoom */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* --- AR-Container: Vollbild, MindAR hängt hier Video + Canvas rein -------- */
+#ar-container {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+#ar-container canvas { position: absolute; inset: 0; }
+
+/* --- Bottom-UI-Wurzel (QuestionMenu rendert hier hinein) ------------------- */
+#question-root {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+#question-root > * { pointer-events: auto; }
+
+/* --- DET-Logo oben links (klickbar → Stellenanzeige, neuer Tab) ------------ */
+#detLogo {
+  position: fixed;
+  left: 0;
+  top: calc(32px + env(safe-area-inset-top));
+  z-index: 6;
+  display: none;                    /* erst nach dem Start sichtbar */
+  align-items: center;
+  background: var(--s-outline);
+  border-radius: 0 8px 8px 0;       /* links bündig am Rand, links eckig */
+  padding: 8px 12px 8px calc(10px + env(safe-area-inset-left));
+  transform-origin: left center;
+  transition: transform 0.15s ease;
+}
+#detLogo:active { transform: scale(0.95); }
+#detLogo img { height: 18px; display: block; pointer-events: none; }
+body.launched #detLogo { display: flex; }
+
+/* --- Tracking-Hinweis (Karte verloren) -------------------------------------- */
+#trackingHint {
+  position: fixed;
+  top: calc(90px + env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  display: none;
+  font-family: var(--s-font);
+  font-size: 22px;
+  color: var(--s-yellow);
+  background: var(--s-outline);
+  padding: 10px 16px;
+  border-radius: 8px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* ============================================================================
+   SPLASH — Vollbild-Startscreen vor dem AR-Launch.
+   ============================================================================ */
+.splash {
+  background-color: var(--s-bg);
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  text-align: center;
+  box-sizing: border-box;
+  padding: calc(28px + env(safe-area-inset-top)) 24px
+           calc(40px + env(safe-area-inset-bottom)) 24px;
+  overflow: hidden;
+}
+body.launched .splash { display: none; }
+
+/* Versetztes Punktraster (gleiche Technik wie das Frage-Panel) */
+.splash::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-color: var(--s-dot-color);
+  --dot-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 6 6'%3E%3Crect width='1' height='1' fill='black'/%3E%3C/svg%3E");
+  -webkit-mask-image: var(--dot-mask), var(--dot-mask);
+  mask-image: var(--dot-mask), var(--dot-mask);
+  -webkit-mask-repeat: repeat, repeat;
+  mask-repeat: repeat, repeat;
+  -webkit-mask-size: var(--s-dot-gap) var(--s-dot-gap);
+  mask-size: var(--s-dot-gap) var(--s-dot-gap);
+  -webkit-mask-position: 0 0, calc(var(--s-dot-gap) / 2) calc(var(--s-dot-gap) / 2);
+  mask-position: 0 0, calc(var(--s-dot-gap) / 2) calc(var(--s-dot-gap) / 2);
+}
+
+/* DEIN ERSTER TAG Logo — weiße Wortmarke im schwarzen Quadrat, oben links */
+.det-logo {
+  position: relative;
+  z-index: 1;
+  align-self: flex-start;
+  background: var(--s-outline);
+  border-radius: 10px;
+  padding: 12px;
+  width: 100px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+.det-logo > img { display: block; width: 100%; height: auto; }
+
+/* Mittlerer Block: Kicker + Berufsname + Firmen-Logo */
+.splash-center {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  max-width: 340px;
+}
+.splash-kicker {
+  font-family: var(--s-font);
+  font-size: 36px;
+  letter-spacing: 1.5px;
+  color: var(--s-yellow);
+  text-transform: uppercase;
+  margin: 0;
+  opacity: 0.85;
+}
+.card-name {
+  font-family: var(--s-font);
+  font-size: 38px;
+  line-height: 0.92;
+  letter-spacing: 0.3px;
+  color: var(--s-yellow);
+  background: var(--s-outline);
+  border-radius: 4px;
+  padding: 12px 18px;
+  margin: 0;
+  text-align: left;
+  align-self: flex-start;
+  white-space: normal;
+}
+.company { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.company-label {
+  font-family: var(--s-font);
+  font-size: 16px;
+  letter-spacing: 1.5px;
+  color: var(--s-text-light);
+  opacity: 0.6;
+  text-transform: uppercase;
+}
+.company-logo-box { display: flex; align-items: center; justify-content: center; transform: rotate(1.5deg); }
+.company-logo-box > img { display: block; width: 100px; height: auto; }
+
+/* Start-CTA */
+.splash-cta {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+#launchButton {
+  font-family: var(--s-font);
+  font-size: 34px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--s-outline);
+  background: var(--s-yellow);
+  border: var(--s-border-width) solid var(--s-outline);
+  border-radius: var(--s-radius);
+  box-shadow: 0 var(--s-shadow-depth) 0 var(--s-outline);
+  padding: 14px 54px;
+  min-height: 60px;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.12s ease;
+}
+#launchButton:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 var(--s-outline);
+}
+
+/* Ladezustand: Button → Spinner */
+#launchButton:disabled {
+  background: none;
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  width: 60px;
+  min-height: 60px;
+  padding: 0;
+  visibility: hidden;
+}
+#launchButton:disabled::before {
+  content: " ";
+  visibility: visible;
+  display: block;
+  width: 56px;
+  height: 56px;
+  margin: 0;
+  border-radius: 50%;
+  box-sizing: border-box;
+  border: 6px solid var(--s-yellow);
+  border-color: var(--s-yellow) transparent var(--s-yellow) transparent;
+  animation: loading-animation 1.2s linear infinite;
+}
+@keyframes loading-animation {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Fehlermeldung (Kamera verweigert etc.) */
+#errorBox {
+  display: none;
+  position: relative;
+  z-index: 1;
+  font-family: var(--s-font);
+  font-size: 20px;
+  color: #fff;
+  background: #b3261e;
+  border: 3px solid var(--s-outline);
+  border-radius: 10px;
+  padding: 12px 16px;
+  max-width: 320px;
+}
+
+@media (max-width: 380px) {
+  .card-name     { font-size: 32px; }
+  .splash-kicker { font-size: 32px; }
+}

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>DEIN ERSTER TAG — AR</title>
+  <link rel="stylesheet" href="./css/app.css" />
+  <link rel="stylesheet" href="./css/question-menu.css" />
+  <!-- Abhängigkeiten per CDN (kein Build-Schritt). Versionen sind GEPINNT —
+       nicht auf "latest" ändern, mind-ar 1.2.5 ist gegen three 0.160 gebaut. -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+      "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <!-- AR-Vollbild: MindAR hängt hier Kamera-Video + WebGL-Canvas rein -->
+  <div id="ar-container"></div>
+
+  <!-- DET-Label oben links (klickbar → Stellenanzeige, neuer Tab); href wird
+       aus den Karten-Daten gesetzt -->
+  <a id="detLogo" href="#" target="_blank" rel="noopener noreferrer">
+    <img src="./assets/logos/det-logo-white.svg" alt="DEIN ERSTER TAG" />
+  </a>
+
+  <!-- Hinweis, wenn die Karte nach dem ersten Scan wieder verloren geht -->
+  <div id="trackingHint"></div>
+
+  <!-- Bottom-UI: Onboarding-Instruktion, später das Fragen-Karussell -->
+  <div id="question-root"></div>
+
+  <!-- Splash (liegt über allem, verschwindet mit body.launched) -->
+  <div class="splash" id="splash">
+    <div class="det-logo">
+      <img src="./assets/logos/det-logo-white.svg" alt="Dein Erster Tag" />
+    </div>
+
+    <div class="splash-center">
+      <p class="splash-kicker">Du scannst</p>
+      <h1 class="card-name" id="cardName">…</h1>
+      <div class="company">
+        <span class="company-label">bei</span>
+        <div class="company-logo-box">
+          <img src="./assets/logos/penny-logo.svg" alt="PENNY" />
+        </div>
+      </div>
+    </div>
+
+    <div class="splash-cta">
+      <div id="errorBox"></div>
+      <button id="launchButton" disabled>Start</button>
+    </div>
+  </div>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
