@@ -33,6 +33,7 @@ import { CardController } from "./cardController.js";
 import { DebugOverlay } from "./debugOverlay.js";
 import { PoseStabilizer } from "./poseStabilizer.js";
 import { GyroFusion } from "./gyroFusion.js";
+import { StatsOverlay } from "./statsOverlay.js";
 import { GYRO } from "./config.js";
 
 const params = new URLSearchParams(location.search);
@@ -234,12 +235,15 @@ async function startAR() {
   worldRoot.scale.setScalar(1 / SCENE.cardWidth);
   stabRoot.add(worldRoot);
 
+  // ?stats — Live-Diagnose am Gerät (Tracking/Gyro/Jitter in Zahlen)
+  const stats = params.has("stats") ? new StatsOverlay(anchor.group, stabRoot, stab, gyro) : null;
+
   const { controller, loop } = buildExperience({
     renderer, scene, camera, worldRoot,
     /* Behavior-Ticks nur, solange die Figur sichtbar ist — verhindert, dass
        Lost-Frames (NaN-Quelle) in die Zustands-Lerps einsickern. */
     isRunning: () => stabRoot.visible,
-    preTick: () => stab.tick(),
+    preTick: () => { stab.tick(); stats?.tick(); },
   });
 
   const hint = el("trackingHint");

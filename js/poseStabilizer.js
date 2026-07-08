@@ -83,7 +83,8 @@ export class PoseStabilizer {
     const dt = dtMs / 1000;
     const frameRatio = (STAB.refHz * dtMs) / 1000;
 
-    // Gyro-Delta JEDEN Frame abholen (hält den internen Zustand frisch)
+    // Gyro-Delta JEDEN Frame abholen (hält den internen Zustand frisch).
+    // null = KEIN frisches Signal (keine Permission / kein Sensor / stale).
     const dq = this.gyro?.getDelta() ?? null;
 
     // --- Lost-Hold / Gyro-Brücke ----------------------------------------------
@@ -91,13 +92,17 @@ export class PoseStabilizer {
     if (!this.tracking) {
       const since = now - this.lastSeenMs;
       if (dq && GYRO.enabled && this.everVisible && this.target.visible && since < GYRO.bridgeMs) {
-        // Aussetzer gyro-geführt überbrücken: Kamera-Drehung auf die
-        // gehaltene Pose anwenden → Figur klebt weiter (ungefähr) auf der Karte.
+        // Gyro-Brücke: Kamera-Drehung wird kompensiert — die Figur bleibt
+        // (ungefähr) auf der KARTE, nicht am Bildschirm.
         this.applyCameraDelta(dq);
         this.write();
         return;
       }
-      const holdMs = GYRO.enabled && this.gyro?.enabled ? Math.max(STAB.lostHoldMs, GYRO.bridgeMs) : STAB.lostHoldMs;
+      // FIX 2026-07-08 (Handy-Test): OHNE lebendes Gyro-Signal gibt es KEINE
+      // lange Brücke — die eingefrorene Pose ist kamera-relativ und klebt am
+      // BILDSCHIRM, sobald sich das Handy bewegt („Figur hängt im Bild").
+      // Dann nur kurzer Flacker-Schutz (lostHoldMs), danach ausblenden.
+      const holdMs = dq ? GYRO.bridgeMs : STAB.lostHoldMs;
       if (this.everVisible && since > holdMs) {
         this.target.visible = false;
       }
@@ -120,6 +125,14 @@ export class PoseStabilizer {
     // z≈-4500). Gefiltert wird deshalb in KARTENBREITEN (pos / scale) — damit
     // sind posDeadZone/beta einheitenfest, egal wie groß das Target ist.
     _pos.divideScalar(_scale.x);
+
+    // FIX 2026-07-08: Ist die gemessene Pose WEIT weg vom geglätteten Zustand
+    // (Re-Found nach Drift/Brücke), sofort SNAPPEN statt sichtbar hinüberzugleiten.
+    if (this.initialised &&
+        (this.smoothPos.distanceTo(_pos) > STAB.snapDist ||
+         this.smoothQuat.angleTo(_quat) > STAB.snapAngle)) {
+      this.initialised = false;
+    }
 
     if (!this.initialised) {
       this.xPrev.copy(_pos);
@@ -157,6 +170,13 @@ export class PoseStabilizer {
      Frame entsprechend gegenrotieren: R' = dq⁻¹⊗R, p' = dq⁻¹·p. Wirkt auf
      den GEGLÄTTETEN Zustand + Filter-Historie (xPrev/dxPrev mitdrehen). */
   applyCameraDelta(dq) {
+    // FIX 2026-07-08 („dezentes Zittern"): Sensor-Rauschen dead-banden.
+    // deviceorientation zittert auf ruhigem Handy leicht (v. a. der Kompass-
+    // Anteil in alpha) — ungefiltert übernommen wird daraus Pose-Jitter.
+    // Winzige Deltas ignorieren (langsame Drehung korrigiert das Sehen ohnehin),
+    // absurde Deltas (Sensor-Glitch) verwerfen.
+    const ang = 2 * Math.acos(Math.min(1, Math.abs(dq.w)));
+    if (ang < GYRO.deltaDeadZone || ang > GYRO.deltaMax) return;
     _dqInv.copy(dq).invert();
     this.smoothQuat.premultiply(_dqInv);
     this.smoothPos.applyQuaternion(_dqInv);

@@ -99,6 +99,8 @@ export const STAB = {
   posDeadZone: 0.001,   // Kartenbreiten; darunter kein Update → Figur steht 100% still
   rotDeadZone: 0.0015,  // dito Rotation (Radiant)
   lostHoldMs: 250,      // letzte gute Pose so lange halten, bevor ausgeblendet
+  snapDist: 0.25,       // Kartenbreiten; Messung weiter weg → snappen statt gleiten
+  snapAngle: 0.5,       // Radiant (~29°); dito Rotation
   refHz: 60,
 };
 
@@ -106,7 +108,9 @@ export const STAB = {
 // überbrückt kurze Tracking-Aussetzer. Kill-Switch zusätzlich per ?nogyro.
 export const GYRO = {
   enabled: true,
-  bridgeMs: 1200,  // wie lange ein Tracking-Aussetzer gyro-geführt überbrückt wird
+  bridgeMs: 1200,        // wie lange ein Aussetzer gyro-geführt überbrückt wird
+  deltaDeadZone: 0.0012, // rad/Frame; kleinere Deltas = Sensor-Rauschen → ignorieren
+  deltaMax: 0.2,         // rad/Frame; größere Deltas = Sensor-Glitch → verwerfen
 };
 
 const ALL = { TYPO, FACE, IDLE, ACT, CHOREO, SCENE, STAB, GYRO };
