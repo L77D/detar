@@ -20,11 +20,12 @@
    ein kaputter Frame komplett verworfen.
    ============================================================================= */
 import * as THREE from "three";
-import { STAB } from "./config.js";
+import { STAB, GYRO } from "./config.js";
 
 const _pos = new THREE.Vector3();
 const _quat = new THREE.Quaternion();
 const _scale = new THREE.Vector3();
+const _dqInv = new THREE.Quaternion();
 
 function finiteVec(v) { return Number.isFinite(v.x) && Number.isFinite(v.y) && Number.isFinite(v.z); }
 function finiteQuat(q) { return Number.isFinite(q.x) && Number.isFinite(q.y) && Number.isFinite(q.z) && Number.isFinite(q.w); }
@@ -33,10 +34,12 @@ export class PoseStabilizer {
   /**
    * @param source anchor.group (MindAR schreibt hier die rohe Pose rein)
    * @param target stabRoot (eigene Group auf Szenen-Ebene, trägt die Figur)
+   * @param gyro   optionale GyroFusion (Prediction + Lost-Brücke)
    */
-  constructor(source, target) {
+  constructor(source, target, gyro = null) {
     this.source = source;
     this.target = target;
+    this.gyro = gyro;
     this.target.matrixAutoUpdate = false;
     this.target.visible = false;
 
@@ -57,10 +60,9 @@ export class PoseStabilizer {
 
   onFound() {
     const now = performance.now();
-    // Nach längerem Verlust auf die neue Pose SNAPPEN statt über den halben
-    // Bildschirm zu gleiten (und keinen riesigen Geschwindigkeits-Spike in
-    // den One-Euro-Zustand geben).
-    if (this.everVisible && now - this.lastSeenMs > STAB.lostHoldMs) {
+    // Nur wenn die Figur schon AUSGEBLENDET war, auf die neue Pose snappen —
+    // war sie noch sichtbar (Lost-Hold/Gyro-Brücke), weich weiterkorrigieren.
+    if (this.everVisible && !this.target.visible) {
       this.initialised = false;
     }
     this.tracking = true;
@@ -81,20 +83,43 @@ export class PoseStabilizer {
     const dt = dtMs / 1000;
     const frameRatio = (STAB.refHz * dtMs) / 1000;
 
-    // --- Lost-Hold: letzte gute Pose kurz halten, dann ausblenden ------------
+    // Gyro-Delta JEDEN Frame abholen (hält den internen Zustand frisch)
+    const dq = this.gyro?.getDelta() ?? null;
+
+    // --- Lost-Hold / Gyro-Brücke ----------------------------------------------
     if (this.tracking) this.lastSeenMs = now;
     if (!this.tracking) {
-      if (this.everVisible && now - this.lastSeenMs > STAB.lostHoldMs) {
+      const since = now - this.lastSeenMs;
+      if (dq && GYRO.enabled && this.everVisible && this.target.visible && since < GYRO.bridgeMs) {
+        // Aussetzer gyro-geführt überbrücken: Kamera-Drehung auf die
+        // gehaltene Pose anwenden → Figur klebt weiter (ungefähr) auf der Karte.
+        this.applyCameraDelta(dq);
+        this.write();
+        return;
+      }
+      const holdMs = GYRO.enabled && this.gyro?.enabled ? Math.max(STAB.lostHoldMs, GYRO.bridgeMs) : STAB.lostHoldMs;
+      if (this.everVisible && since > holdMs) {
         this.target.visible = false;
       }
       return; // Pose eingefroren — nie aus einem Lost-Frame lesen (NaN-Quelle)
     }
 
+    // --- Gyro-PREDICTION: echte Kamera-Drehung sofort übernehmen ---------------
+    // Das Sehen muss dann nur noch Drift/Translation korrigieren → der Filter
+    // darf hart glätten, ohne dass die Figur bei Bewegung nachzieht.
+    if (dq && GYRO.enabled) this.applyCameraDelta(dq);
+
     // --- Rohe kamera-relative Pose lesen + NaN-Schutz -------------------------
     this.source.matrix.decompose(_pos, _quat, _scale);
-    if (!finiteVec(_pos) || !finiteQuat(_quat) || !finiteVec(_scale)) {
+    if (!finiteVec(_pos) || !finiteQuat(_quat) || !finiteVec(_scale) || _scale.x < 1e-8) {
       return; // kaputter Frame → komplett verwerfen, letzte gute Pose steht
     }
+
+    // EINHEITEN-NORMIERUNG (Prüfstand-Befund 2026-07-08): MindARs Kamera-Raum
+    // ist PIXEL-skaliert (Anchor-Scale ≈ Target-Pixelbreite, Position z. B.
+    // z≈-4500). Gefiltert wird deshalb in KARTENBREITEN (pos / scale) — damit
+    // sind posDeadZone/beta einheitenfest, egal wie groß das Target ist.
+    _pos.divideScalar(_scale.x);
 
     if (!this.initialised) {
       this.xPrev.copy(_pos);
@@ -128,6 +153,17 @@ export class PoseStabilizer {
     this.write();
   }
 
+  /* Kamera hat sich um dq gedreht (Kamera-Frame) → Karten-Pose im Kamera-
+     Frame entsprechend gegenrotieren: R' = dq⁻¹⊗R, p' = dq⁻¹·p. Wirkt auf
+     den GEGLÄTTETEN Zustand + Filter-Historie (xPrev/dxPrev mitdrehen). */
+  applyCameraDelta(dq) {
+    _dqInv.copy(dq).invert();
+    this.smoothQuat.premultiply(_dqInv);
+    this.smoothPos.applyQuaternion(_dqInv);
+    this.xPrev.applyQuaternion(_dqInv);
+    this.dxPrev.applyQuaternion(_dqInv);
+  }
+
   oneEuro(targetV, out, dt) {
     for (const a of ["x", "y", "z"]) {
       const dxRaw = (targetV[a] - this.xPrev[a]) / Math.max(dt, 1e-4);
@@ -146,7 +182,9 @@ export class PoseStabilizer {
   }
 
   write() {
-    this.target.matrix.compose(this.smoothPos, this.smoothQuat, this.lastScale);
+    // smoothPos ist in Kartenbreiten normiert → zurück in Anchor-Einheiten
+    _pos.copy(this.smoothPos).multiplyScalar(this.lastScale.x);
+    this.target.matrix.compose(_pos, this.smoothQuat, this.lastScale);
     this.target.matrixWorldNeedsUpdate = true;
   }
 }

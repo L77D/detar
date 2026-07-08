@@ -32,6 +32,8 @@ import { QuestionMenu } from "./questionMenu.js";
 import { CardController } from "./cardController.js";
 import { DebugOverlay } from "./debugOverlay.js";
 import { PoseStabilizer } from "./poseStabilizer.js";
+import { GyroFusion } from "./gyroFusion.js";
+import { GYRO } from "./config.js";
 
 const params = new URLSearchParams(location.search);
 const DESKTOP_MODE = params.has("desktop");
@@ -40,6 +42,7 @@ const DESKTOP_MODE = params.has("desktop");
 const DEBUG_MODE = params.has("debug");
 
 const el = (id) => document.getElementById(id);
+let gyro = null; // GyroFusion — wird in der START-Geste angelegt (iOS-Permission)
 
 /* --------------------------------------------------------------------------
    Splash befüllen + Start-Button freigeben, sobald Tuning + Font geladen sind.
@@ -59,6 +62,12 @@ async function boot() {
   btn.disabled = false;
   btn.addEventListener("click", async () => {
     btn.disabled = true; // Spinner während Kamera/Tracking hochfahren
+    // Gyro-Permission MUSS direkt in der User-Geste angefragt werden (iOS) —
+    // deshalb hier, VOR allen awaits. Fail-safe: ohne Gyro läuft alles normal.
+    if (!DESKTOP_MODE && GYRO.enabled && !params.has("nogyro")) {
+      gyro = new GyroFusion();
+      gyro.enable(); // bewusst nicht awaiten (Geste nicht verlieren)
+    }
     try {
       if (DESKTOP_MODE) await startDesktop();
       else await startAR();
@@ -216,7 +225,7 @@ async function startAR() {
   // Geglätteter Träger auf Szenen-Ebene (anchor.group bleibt leer)
   const stabRoot = new THREE.Group();
   scene.add(stabRoot);
-  const stab = new PoseStabilizer(anchor.group, stabRoot);
+  const stab = new PoseStabilizer(anchor.group, stabRoot, gyro);
 
   // Karten-Frame unter dem stabRoot: X = rechts, Y = hoch von der Karte,
   // Z = zur Karten-Unterkante. (+90° X: Anchor-Z "aus dem Bild" wird zu Y.)

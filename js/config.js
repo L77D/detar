@@ -80,9 +80,10 @@ export const SCENE = {
 //     + Lost-Hold zwischen Anchor und Figur. Das ist die Haupt-Glättung.
 // Faustregel: erst minCutoff runter, bis das Ruhe-Zittern weg ist, dann beta
 // hoch, bis schnelle Bewegung ohne Nachziehen folgt — EINE Schraube pro Test.
-// Einheiten-Hinweis: Positionen sind in MindAR-Einheiten (Kartenbreite = 1),
-// ~10× größer als die Zapworks-Meter — beta/posDeadZone sind daher anders
-// skaliert als die alten PoseStabilizer.ts-Werte.
+// EINHEITEN: Der PoseStabilizer filtert in KARTENBREITEN (er normiert MindARs
+// pixel-skalierte Anchor-Pose intern über die Anchor-Scale). posDeadZone 0.001
+// = 1/1000 Kartenbreite (≈ 0,15 mm bei 15-cm-Karte); beta bezieht sich auf
+// Geschwindigkeit in Kartenbreiten/s.
 export const STAB = {
   // (a) MindAR-eingebauter Filter (Rohsignal, Defaults belassen)
   filterMinCF: 0.001,
@@ -90,18 +91,25 @@ export const STAB = {
   missTolerance: 5,     // Frames "Karte kurz verloren" aushalten
   warmupTolerance: 5,   // Frames bis "Karte gefunden" gemeldet wird
 
-  // (b) PoseStabilizer — Haupt-Glättung
+  // (b) PoseStabilizer — Haupt-Glättung (Werte prüfstand-kalibriert 2026-07-08)
   minCutoff: 1.0,       // Grund-Glättung in Ruhe. KLEINER = ruhiger, aber träger
-  beta: 0.0015,         // wie stark Bewegung die Glättung löst. GRÖSSER = wacher
+  beta: 0.002,          // wie stark Bewegung die Glättung löst. GRÖSSER = wacher
   dCutoff: 1.0,         // Glättung der Geschwindigkeitsschätzung (selten anfassen)
   rotLerp: 0.35,        // SLERP-Faktor pro Frame @60Hz. KLEINER = ruhiger/träger
-  posDeadZone: 0.0015,  // darunter kein Positions-Update → Figur steht 100% still
+  posDeadZone: 0.001,   // Kartenbreiten; darunter kein Update → Figur steht 100% still
   rotDeadZone: 0.0015,  // dito Rotation (Radiant)
   lostHoldMs: 250,      // letzte gute Pose so lange halten, bevor ausgeblendet
   refHz: 60,
 };
 
-const ALL = { TYPO, FACE, IDLE, ACT, CHOREO, SCENE, STAB };
+// Gyro-Fusion: Handy-Gyroskop stützt die visuelle Pose (Prediction) und
+// überbrückt kurze Tracking-Aussetzer. Kill-Switch zusätzlich per ?nogyro.
+export const GYRO = {
+  enabled: true,
+  bridgeMs: 1200,  // wie lange ein Tracking-Aussetzer gyro-geführt überbrückt wird
+};
+
+const ALL = { TYPO, FACE, IDLE, ACT, CHOREO, SCENE, STAB, GYRO };
 
 /* tuning.json (Preset-Export aus dem Lokal-Prototyp) laden und über die
    Defaults mergen. Fehlt die Datei, laufen die Defaults — kein Fehler. */
