@@ -47,6 +47,9 @@ html, body {
    Wisch-Geste interpretieren (sonst pointercancel statt pointerup —
    Symptom: „Karte lässt sich nicht tappen"). */
 #ar-container canvas { position: absolute; inset: 0; touch-action: none; }
+/* Video + evtl. weitere MindAR-Layer dürfen keine Taps schlucken —
+   Eingaben gehören dem Canvas (Raycast). Doppelter Boden zum JS-Fix. */
+#ar-container video, #ar-container div { pointer-events: none; }
 
 /* --- Bottom-UI-Wurzel (QuestionMenu rendert hier hinein) ------------------- */
 #question-root {

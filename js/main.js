@@ -266,6 +266,15 @@ async function startAR() {
     warmupTolerance: STAB.warmupTolerance,
   });
   const { renderer, scene, camera } = mindarThree;
+
+  // GOTCHA (gefunden 2026-07-09): mindar-image-three legt IMMER einen
+  // CSS3DRenderer-Layer an — ein unbenanntes, vollflächiges <div> NACH dem
+  // Canvas. Es schluckt alle Pointer-Events → „Karte lässt sich nicht tappen".
+  // Wir nutzen kein CSS3D → Layer für Eingaben durchlässig machen.
+  if (mindarThree.cssRenderer?.domElement) {
+    mindarThree.cssRenderer.domElement.style.pointerEvents = "none";
+  }
+
   const anchor = mindarThree.addAnchor(0);
 
   // Geglätteter Träger auf Szenen-Ebene (anchor.group bleibt leer)
