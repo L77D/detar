@@ -104,6 +104,16 @@ export const STAB = {
   lostHoldMs: 250,      // letzte gute Pose so lange halten, bevor ausgeblendet
   snapDist: 0.25,       // Kartenbreiten; Messung weiter weg → snappen statt gleiten
   snapAngle: 0.5,       // Radiant (~29°); dito Rotation
+
+  // Bewegungs-Extrapolation (2026-07-09): MindAR misst nur mit ~15–30 Hz —
+  // zwischen zwei Messungen wird die Pose mit der zuletzt gemessenen
+  // Geschwindigkeit WEITERGEFÜHRT (Dead Reckoning), statt treppig zu stehen.
+  // Zusätzlich schaltet erkannte Bewegung die Dead-Zone ab: ruhig in Ruhe,
+  // flüssig in Bewegung.
+  extrapolate: "ja",
+  extrapMaxMs: 150,     // max. so lange vorhersagen (dann halten)
+  minSpeed: 0.03,       // Kartenbreiten/s; darunter gilt „steht" (kein Extrapolieren,
+                        // Dead-Zone aktiv — verhindert Drift aus Mess-Rauschen)
   refHz: 60,
 };
 

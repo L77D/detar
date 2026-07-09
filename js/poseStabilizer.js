@@ -26,6 +26,9 @@ const _pos = new THREE.Vector3();
 const _quat = new THREE.Quaternion();
 const _scale = new THREE.Vector3();
 const _dqInv = new THREE.Quaternion();
+const _dq = new THREE.Quaternion();
+const _axis = new THREE.Vector3();
+const _predQ = new THREE.Quaternion();
 
 function finiteVec(v) { return Number.isFinite(v.x) && Number.isFinite(v.y) && Number.isFinite(v.z); }
 function finiteQuat(q) { return Number.isFinite(q.x) && Number.isFinite(q.y) && Number.isFinite(q.z) && Number.isFinite(q.w); }
@@ -56,6 +59,14 @@ export class PoseStabilizer {
     this.everVisible = false;
     this.lastSeenMs = 0;
     this.lastClockMs = 0;
+
+    // Bewegungs-Extrapolation: letzte ECHTE Messung + geschätzte Geschwindigkeit
+    this.measPos = new THREE.Vector3();     // letzte neue Messung (Kartenbreiten)
+    this.measQuat = new THREE.Quaternion();
+    this.measT = 0;                         // Zeitpunkt der Messung
+    this.vel = new THREE.Vector3();         // Kartenbreiten/s (geglättet)
+    this.angVel = new THREE.Vector3();      // Achse*rad/s (geglättet)
+    this.hasMeas = false;
   }
 
   onFound() {
@@ -140,17 +151,33 @@ export class PoseStabilizer {
       this.smoothPos.copy(_pos);
       this.smoothQuat.copy(_quat);
       this.lastScale.copy(_scale);
+      this.measPos.copy(_pos);
+      this.measQuat.copy(_quat);
+      this.measT = now;
+      this.hasMeas = true;
+      this.vel.set(0, 0, 0);
+      this.angVel.set(0, 0, 0);
       this.initialised = true;
       this.write();
       return;
     }
     this.lastScale.copy(_scale);
 
+    // --- Bewegungs-Extrapolation (2026-07-09) -----------------------------------
+    // MindAR misst nur mit ~15–30 Hz; dazwischen wiederholt der Anchor die
+    // alte Pose → Treppensignal beim Karte-Bewegen. Hier: neue Messungen
+    // erkennen, Geschwindigkeit schätzen, und zwischen den Messungen die
+    // Ziel-Pose mit dieser Geschwindigkeit WEITERFÜHREN (_pos/_quat werden
+    // durch die Prediction ersetzt). `moving` schaltet zusätzlich die
+    // Dead-Zones ab — ruhig in Ruhe, flüssig in Bewegung.
+    this.updateMotionEstimate(now);
+    const moving = this.applyExtrapolation(now);
+
     // --- One-Euro auf die Position (pro Achse) --------------------------------
     this.oneEuro(_pos, this.smoothPos, dt);
 
-    // Dead-Zone: winzige Restbewegung verwerfen (Snap-to-still)
-    if (this.smoothPos.distanceTo(this.xPrev) < STAB.posDeadZone) {
+    // Dead-Zone: winzige Restbewegung verwerfen (nur im RUHE-Zustand)
+    if (!moving && this.smoothPos.distanceTo(this.xPrev) < STAB.posDeadZone) {
       this.smoothPos.copy(this.xPrev);
     } else {
       this.xPrev.copy(this.smoothPos);
@@ -158,12 +185,62 @@ export class PoseStabilizer {
 
     // --- SLERP auf die Rotation ------------------------------------------------
     const angle = this.smoothQuat.angleTo(_quat);
-    if (angle > STAB.rotDeadZone) {
+    if (angle > STAB.rotDeadZone || moving) {
       const t = Math.min(1, STAB.rotLerp * frameRatio);
       this.smoothQuat.slerp(_quat, t);
     }
 
     this.write();
+  }
+
+  /* Neue Vision-Messung erkennen (Pose unterscheidet sich von der letzten) und
+     lineare + Winkel-Geschwindigkeit schätzen (geglättet, 50/50-Lerp). */
+  updateMotionEstimate(now) {
+    const dPos = _pos.distanceTo(this.measPos);
+    const dAng = this.measQuat.angleTo(_quat);
+    if (dPos < 1e-6 && dAng < 1e-6) return; // stale Frame — keine neue Messung
+    const dtMeas = Math.min(0.5, Math.max(0.005, (now - this.measT) / 1000));
+
+    // linear
+    const vx = (_pos.x - this.measPos.x) / dtMeas;
+    const vy = (_pos.y - this.measPos.y) / dtMeas;
+    const vz = (_pos.z - this.measPos.z) / dtMeas;
+    if (Number.isFinite(vx)) this.vel.lerp({ x: vx, y: vy, z: vz }, 0.5);
+
+    // Winkel: dq = meas⁻¹ ⊗ neu → Achse*Winkel/Zeit (im Mess-lokalen Frame)
+    _dq.copy(this.measQuat).invert().multiply(_quat);
+    if (_dq.w < 0) { _dq.x *= -1; _dq.y *= -1; _dq.z *= -1; _dq.w *= -1; } // kürzester Weg
+    const s = Math.sqrt(Math.max(0, 1 - _dq.w * _dq.w));
+    if (s > 1e-6) {
+      const ang = 2 * Math.acos(Math.min(1, _dq.w));
+      _axis.set(_dq.x / s, _dq.y / s, _dq.z / s).multiplyScalar(ang / dtMeas);
+      this.angVel.lerp(_axis, 0.5);
+    } else {
+      this.angVel.multiplyScalar(0.5);
+    }
+
+    this.measPos.copy(_pos);
+    this.measQuat.copy(_quat);
+    this.measT = now;
+  }
+
+  /* Zwischen den Messungen: Ziel-Pose (_pos/_quat) per Geschwindigkeit
+     vorhersagen. Liefert true, wenn die Karte gerade als „in Bewegung" gilt. */
+  applyExtrapolation(now) {
+    const speed = this.vel.length();
+    const angSpeed = this.angVel.length();
+    const moving = speed > STAB.minSpeed || angSpeed > 0.15;
+    if (STAB.extrapolate === "nein" || !moving) return moving;
+    const tp = Math.min(now - this.measT, STAB.extrapMaxMs) / 1000;
+    if (tp <= 0) return moving;
+    _pos.copy(this.measPos).addScaledVector(this.vel, tp);
+    const ang = angSpeed * tp;
+    if (ang > 1e-5) {
+      _axis.copy(this.angVel).normalize();
+      _predQ.setFromAxisAngle(_axis, ang);
+      _quat.copy(this.measQuat).multiply(_predQ);
+    }
+    return moving;
   }
 
   /* Kamera hat sich um dq gedreht (Kamera-Frame) → Karten-Pose im Kamera-
@@ -182,6 +259,10 @@ export class PoseStabilizer {
     this.smoothPos.applyQuaternion(_dqInv);
     this.xPrev.applyQuaternion(_dqInv);
     this.dxPrev.applyQuaternion(_dqInv);
+    // Bewegungs-Schätzung mitdrehen (Kamera-Frame hat sich gedreht)
+    this.measPos.applyQuaternion(_dqInv);
+    this.measQuat.premultiply(_dqInv);
+    this.vel.applyQuaternion(_dqInv);
   }
 
   oneEuro(targetV, out, dt) {
