@@ -39,12 +39,15 @@ dann `http://localhost:8080` öffnen.
   Choreographie/Verhalten am Rechner: `http://localhost:8080/?desktop`
 * **`?debug`** — pinke Hilfslinien (Lauffeld + FACE_CAM-Kegel), kombinierbar:
   `?desktop&debug`
-* **`?dev`** — Entwickler-Modus: Tuning-Panel (alle Regler des alten
-  Lokal-Prototyps, live) + **Theatre.js-Timeline** (visueller Keyframe-Editor).
-  Typisch: `?desktop&dev`. Regler-Stand bleibt in localStorage erhalten;
-  „tuning.json exportieren" erzeugt direkt die Repo-Datei.
+* **`?dev`** — Tuning-Panel (alle Regler live, localStorage-persistent,
+  Presets, tuning.json-Export, Replay, Tracking-Feature-Toggles). Bewusst
+  OHNE Theatre — bleibt auch am Handy übersichtlich.
+* **`?timeline`** — Theatre.js-Studio (visueller Keyframe-Editor). Für
+  Animations-Arbeit am Rechner: `?desktop&dev&timeline`.
 * **`?stats`** — Live-Diagnose am Handy: Tracking-/Gyro-Status, Jitter in mm,
   Gyro-Toggle. **`?nogyro`** — Gyro-Fusion komplett aus.
+
+Flags sind frei kombinierbar (z. B. `?dev&stats` am Handy fürs Tracking-Tuning).
 
 ## Animationen / Timeline (Theatre.js)
 

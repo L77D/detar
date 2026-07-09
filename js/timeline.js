@@ -70,6 +70,7 @@ export async function initTimeline({ nodes, withStudio }) {
   await project.ready;
 
   return {
+    hasStudio: !!(withStudio && T.studio),
     /* Sequenz abspielen, z. B. play({ range: [0, 2] }) oder play() für alles.
        Rückgabe: Promise, resolved wenn fertig. */
     play: (opts) => sheet.sequence.play(opts ?? {}),

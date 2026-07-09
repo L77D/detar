@@ -170,7 +170,7 @@ export class DevPanel {
       <div class="row"><select id="devPresetSel" style="flex:2"></select>
         <button id="devPresetSave">💾</button><button id="devPresetDel">✕</button></div>
       <div class="row"><button id="devReset">Zurücksetzen (Startwerte)</button></div>
-      ${this.timeline ? `<div class="row"><button id="devTlPlay">▶ Timeline</button>
+      ${this.timeline?.hasStudio ? `<div class="row"><button id="devTlPlay">▶ Timeline</button>
         <button id="devTlExport">Timeline exportieren</button></div>` : ""}
     `;
     panel.appendChild(bar);
@@ -216,7 +216,7 @@ export class DevPanel {
       if (!sel.value || !confirm(`Preset "${sel.value}" löschen?`)) return;
       const p = getPresets(); delete p[sel.value]; setPresets(p); this.refreshPresets("");
     };
-    if (this.timeline) {
+    if (this.timeline?.hasStudio && panel.querySelector("#devTlPlay")) {
       panel.querySelector("#devTlPlay").onclick = () => this.timeline.play();
       panel.querySelector("#devTlExport").onclick = () => this.timeline.exportState();
     }

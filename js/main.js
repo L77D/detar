@@ -42,7 +42,8 @@ const DESKTOP_MODE = params.has("desktop");
 // Debug NUR per URL (?debug) — SCENE.debug aus einem tuning.json-Preset wird
 // bewusst ignoriert (Leftover aus Tuning-Sessions soll nie live erscheinen).
 const DEBUG_MODE = params.has("debug");
-const DEV_MODE = params.has("dev"); // Tuning-Panel + Theatre.js-Studio
+const DEV_MODE = params.has("dev");           // Tuning-Panel (Regler)
+const TIMELINE_MODE = params.has("timeline"); // Theatre.js-Studio (Keyframe-Editor)
 
 const el = (id) => document.getElementById(id);
 let gyro = null; // GyroFusion — wird in der START-Geste angelegt (iOS-Permission)
@@ -236,7 +237,9 @@ async function attachDevTools(exp) {
   let timeline = null;
   try {
     const { initTimeline } = await import("./timeline.js");
-    timeline = await initTimeline({ nodes: exp.nodes, withStudio: DEV_MODE });
+    // Studio-UI NUR mit ?timeline (eigenes Flag — ?dev bleibt schlank);
+    // ohne Flag lädt nur der Player, falls beats.theatre.json existiert.
+    timeline = await initTimeline({ nodes: exp.nodes, withStudio: TIMELINE_MODE });
   } catch (e) {
     console.warn("Timeline nicht verfügbar:", e);
   }
