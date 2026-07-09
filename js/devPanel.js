@@ -105,6 +105,7 @@ export class DevPanel {
         { o: STAB, k: "extrapolate", l: "Bewegungs-Extrapolation", options: ["ja", "nein"] },
         { o: STAB, k: "extrapMaxMs", l: "Extrapolation max (ms)", min: 0, max: 400, step: 10 },
         { o: STAB, k: "minSpeed", l: "Bewegt ab (KB/s)", min: 0, max: 0.3, step: 0.005 },
+        { o: STAB, k: "minAngSpeed", l: "Bewegt ab (rad/s)", min: 0, max: 1.5, step: 0.05 },
         { o: GYRO, k: "bridgeMs", l: "Gyro-Brücke (ms)", min: 0, max: 3000, step: 100 },
         { o: GYRO, k: "deltaDeadZone", l: "Gyro-Dead-Band (rad)", min: 0, max: 0.01, step: 0.0002 },
       ]},

@@ -112,8 +112,10 @@ export const STAB = {
   // flüssig in Bewegung.
   extrapolate: "ja",
   extrapMaxMs: 150,     // max. so lange vorhersagen (dann halten)
-  minSpeed: 0.03,       // Kartenbreiten/s; darunter gilt „steht" (kein Extrapolieren,
-                        // Dead-Zone aktiv — verhindert Drift aus Mess-Rauschen)
+  minSpeed: 0.06,       // Kartenbreiten/s; darunter gilt „steht" (kein Extrapolieren,
+                        // Dead-Zone aktiv). Verdoppelt 2026-07-09: 0.03 sprang
+                        // durch Mess-Rauschen zu schnell in den Bewegt-Modus → Zittern.
+  minAngSpeed: 0.3,     // rad/s; dito für Rotation (vorher hart 0.15)
   refHz: 60,
 };
 

@@ -229,7 +229,7 @@ export class PoseStabilizer {
   applyExtrapolation(now) {
     const speed = this.vel.length();
     const angSpeed = this.angVel.length();
-    const moving = speed > STAB.minSpeed || angSpeed > 0.15;
+    const moving = speed > STAB.minSpeed || angSpeed > STAB.minAngSpeed;
     if (STAB.extrapolate === "nein" || !moving) return moving;
     const tp = Math.min(now - this.measT, STAB.extrapMaxMs) / 1000;
     if (tp <= 0) return moving;
