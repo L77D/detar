@@ -5,19 +5,20 @@
    Rückkopier-Schritt mehr. Zustand wird in localStorage gehalten (nur im
    Dev-Modus geladen), Presets speicherbar.
    ============================================================================= */
-import { TYPO, FACE, IDLE, ACT, CHOREO, SCENE, STAB, GYRO, syncCssVars } from "./config.js";
+import { TYPO, FACE, IDLE, ACT, CHOREO, SCENE, STAB, GYRO, ACTFX, syncCssVars } from "./config.js";
 import { applyNodAxis } from "./rig.js";
 
-const ALL = { TYPO, FACE, IDLE, ACT, CHOREO, SCENE, STAB, GYRO };
+const ALL = { TYPO, FACE, IDLE, ACT, CHOREO, SCENE, STAB, GYRO, ACTFX };
 const LS_KEY = "detar-dev-tuning-v1";
 const PRESET_KEY = "detar-dev-presets-v1";
 
 export class DevPanel {
-  constructor({ bubble, nodes, controller, timeline }) {
+  constructor({ bubble, nodes, controller, timeline, fx }) {
     this.bubble = bubble;
     this.nodes = nodes;
     this.controller = controller;
     this.timeline = timeline;
+    this.fx = fx;
     this.start = JSON.parse(JSON.stringify(snapshot())); // „Zurücksetzen"-Stand
     this.loadLocal();
     this.buildDom();
@@ -29,6 +30,7 @@ export class DevPanel {
     const nod = () => applyNodAxis(this.nodes);
     return [
       { g: "Choreographie", items: [
+        { o: CHOREO, k: "requireTap", l: "Aktivier-Tap nötig", options: ["ja", "nein"] },
         { o: CHOREO, k: "uiRevealMs", l: "UI-Einfahr-Dauer (ms)", min: 0, max: 3000, step: 50, on: syncCssVars },
         { o: CHOREO, k: "revealOffset", l: "Reveal-Offset (px)", min: 0, max: 200, step: 5, on: syncCssVars },
         { o: ACT, k: "durationSec", l: "Pop-In Dauer (s)", min: 0.1, max: 3, step: 0.05 },
@@ -80,6 +82,18 @@ export class DevPanel {
         { o: IDLE, k: "markerWidth", l: "Lauffeld Breite", min: 0.01, max: 0.3, step: 0.005 },
         { o: IDLE, k: "markerHeight", l: "Lauffeld Tiefe", min: 0.01, max: 0.3, step: 0.005 },
         { o: IDLE, k: "roamFraction", l: "Lauffeld-Anteil", min: 0.1, max: 1, step: 0.05 },
+      ]},
+      { g: "Aktivierung (Karten-FX)", items: [
+        { o: ACTFX, k: "count", l: "Partikel-Anzahl", min: 0, max: 60, step: 1, on: () => this.fx?.buildPool() },
+        { o: ACTFX, k: "size", l: "Partikel-Größe", min: 0.002, max: 0.03, step: 0.001 },
+        { o: ACTFX, k: "riseHeight", l: "Aufstiegs-Höhe", min: 0.01, max: 0.25, step: 0.005 },
+        { o: ACTFX, k: "riseSec", l: "Aufstiegs-Dauer (s)", min: 0.4, max: 5, step: 0.1 },
+        { o: ACTFX, k: "pulseSec", l: "Glow-Puls (s)", min: 0.3, max: 5, step: 0.1 },
+        { o: ACTFX, k: "glowOpacity", l: "Glow-Stärke", min: 0, max: 1, step: 0.05 },
+        { o: ACTFX, k: "burstSec", l: "Tap-Blitz-Dauer (s)", min: 0.2, max: 2, step: 0.05 },
+        { o: ACTFX, k: "glowColor", l: "Glow-Farbe", color: true },
+        { o: ACTFX, k: "color1", l: "Partikel-Farbe 1", color: true, on: () => this.fx?.buildPool() },
+        { o: ACTFX, k: "color2", l: "Partikel-Farbe 2", color: true, on: () => this.fx?.buildPool() },
       ]},
       { g: "Tracking (nur AR)", items: [
         { o: STAB, k: "minCutoff", l: "Glättung Ruhe (minCutoff)", min: 0.05, max: 5, step: 0.05 },

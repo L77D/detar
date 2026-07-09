@@ -30,6 +30,7 @@ import { IdleWander } from "./idleWander.js";
 import { ActivationAnim } from "./activationAnim.js";
 import { QuestionMenu } from "./questionMenu.js";
 import { CardController } from "./cardController.js";
+import { ActivationFX } from "./activationFX.js";
 import { DebugOverlay } from "./debugOverlay.js";
 import { PoseStabilizer } from "./poseStabilizer.js";
 import { GyroFusion } from "./gyroFusion.js";
@@ -132,8 +133,10 @@ function buildExperience({ renderer, scene, camera, worldRoot, isRunning, preTic
   const bubble = new SpeechBubble(nodes, frame);
   const wander = new IdleWander(nodes, frame);
   const activation = new ActivationAnim(nodes);
+  const fx = new ActivationFX(worldRoot);
   const menu = new QuestionMenu(el("question-root"), card.questions, (id) => controller.answerQuestion(id));
-  const controller = new CardController({ card, nodes, bubble, face: faceAnim, wander, activation, menu });
+  const controller = new CardController({ card, nodes, bubble, face: faceAnim, wander, activation, menu, fx });
+  window.__detar = { controller, fx, nodes, camera, renderer }; // Debug-Zugriff (Konsole)
   const debug = DEBUG_MODE ? new DebugOverlay(worldRoot, nodes, frame) : null;
   if (debug) debug.setVisible(true);
 
@@ -184,6 +187,11 @@ function buildExperience({ renderer, scene, camera, worldRoot, isRunning, preTic
     _tapNdc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     _tapNdc.y = -(((e.clientY - rect.top) / rect.height) * 2 - 1);
     _ray.setFromCamera(_tapNdc, camera);
+    // Aktivier-Phase: Tap auf die KARTE (unsichtbare Tap-Plane) startet die Figur
+    if (controller.phase === "attract") {
+      if (_ray.intersectObject(fx.tapPlane, false).length > 0) controller.onCardTapped();
+      return;
+    }
     const hits = _ray.intersectObjects(figureMeshes.filter((m) => m.visible), false);
     if (hits.length > 0) startFigureJump();
   });
@@ -199,6 +207,7 @@ function buildExperience({ renderer, scene, camera, worldRoot, isRunning, preTic
       wander.tick(dt);
       tickFigureJump(dt); // nach wander: überschreibt die Position während des Sprungs
       activation.tick(dt);
+      fx.tick(dt);
       faceAnim.tick(dt);
       bubble.tick(dt);
       debug?.tick();
@@ -206,7 +215,7 @@ function buildExperience({ renderer, scene, camera, worldRoot, isRunning, preTic
     renderer.render(scene, camera);
   }
 
-  return { controller, bubble, loop, nodes };
+  return { controller, bubble, loop, nodes, fx };
 }
 
 /* --------------------------------------------------------------------------
@@ -224,7 +233,7 @@ async function attachDevTools(exp) {
   }
   if (DEV_MODE) {
     const { DevPanel } = await import("./devPanel.js");
-    new DevPanel({ bubble: exp.bubble, nodes: exp.nodes, controller: exp.controller, timeline });
+    new DevPanel({ bubble: exp.bubble, nodes: exp.nodes, controller: exp.controller, timeline, fx: exp.fx });
   }
 }
 

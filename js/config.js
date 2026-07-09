@@ -52,6 +52,8 @@ export const ACT = {
 
 // CardController / CSS
 export const CHOREO = {
+  requireTap: "ja",      // "ja" = Aktivier-Phase (Karte leuchtet, Tap startet
+                         // die Figur) · "nein" = Figur kommt direkt beim Scan
   uiRevealMs: 1000,      // reine CSS-Einfahr-DAUER (--q-reveal-time), keine Wartezeit
   revealOffset: 60,      // CSS --q-reveal-offset (px)
   idleReturnMs: 8000,    // Haltezeit NACH dem Typewriter (wird von der Karte überschrieben)
@@ -68,6 +70,7 @@ export const CHOREO = {
 // Sprünge …) unverändert weiter.
 export const SCENE = {
   cardWidth: 0.17,
+  cardAspect: 2048 / 1500, // Höhe/Breite des Kartenbilds (bei neuem Layout anpassen)
   headNodAxis: 0.25, // Höhe der Kopf-Nick-Achse ÜBER dem HeadPivot (≈ Kopfmitte)
   bgColor: "#9a9a9a", // nur Desktop-Testmodus
   debug: false,       // pinke Debug-Overlays (auch per ?debug in der URL)
@@ -104,6 +107,21 @@ export const STAB = {
   refHz: 60,
 };
 
+// Aktivier-Phase (ActivationFX): Karten-Glow + aufsteigende Pixel-Partikel,
+// bevor die Figur erscheint. Optik-Dashboard — alles im Dev-Panel regelbar.
+export const ACTFX = {
+  count: 16,           // Partikel-Anzahl (Regler baut den Pool neu)
+  size: 0.008,         // Basisgröße der Quadrate (Karten-Einheiten)
+  riseHeight: 0.07,    // wie hoch sie aufsteigen
+  riseSec: 1.8,        // Dauer eines Aufstiegs
+  pulseSec: 1.6,       // Glow-Puls-Periode
+  glowOpacity: 0.5,    // Glow-Stärke (0–1)
+  burstSec: 0.7,       // Dauer des Tap-Blitzes bis zur Figur
+  glowColor: "#ffdd00",
+  color1: "#ffdd00",   // Partikel-Farben (Karten-Look: gelb/weiß)
+  color2: "#ffffff",
+};
+
 // Gyro-Fusion: Handy-Gyroskop stützt die visuelle Pose (Prediction) und
 // überbrückt kurze Tracking-Aussetzer. Kill-Switch zusätzlich per ?nogyro.
 export const GYRO = {
@@ -113,7 +131,7 @@ export const GYRO = {
   deltaMax: 0.2,         // rad/Frame; größere Deltas = Sensor-Glitch → verwerfen
 };
 
-const ALL = { TYPO, FACE, IDLE, ACT, CHOREO, SCENE, STAB, GYRO };
+const ALL = { TYPO, FACE, IDLE, ACT, CHOREO, SCENE, STAB, GYRO, ACTFX };
 
 /* tuning.json (Preset-Export aus dem Lokal-Prototyp) laden und über die
    Defaults mergen. Fehlt die Datei, laufen die Defaults — kein Fehler. */

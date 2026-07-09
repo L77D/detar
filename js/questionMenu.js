@@ -16,6 +16,7 @@ export class QuestionMenu {
     "2. Schau mit der Kamera drauf.",
     "3. ???",
   ];
+  static ATTRACT_LINE = "Tipp auf die Karte!";
   renderOnboarding() {
     this.root.innerHTML = "";
     const panel = document.createElement("div");
@@ -25,6 +26,18 @@ export class QuestionMenu {
     intro.innerHTML = QuestionMenu.ONBOARDING_LINES
       .map((line) => `<span class="detar-intro-line">${line}</span>`)
       .join("");
+    panel.appendChild(intro);
+    this.root.appendChild(panel);
+  }
+  /* Aktivier-Phase: eine einzelne Instruktionszeile („Tipp auf die Karte!"). */
+  showAttract() {
+    if (this.revealed) return;
+    this.root.innerHTML = "";
+    const panel = document.createElement("div");
+    panel.className = "detar-panel detar-panel--onboarding";
+    const intro = document.createElement("div");
+    intro.className = "detar-intro";
+    intro.innerHTML = `<span class="detar-intro-line">${QuestionMenu.ATTRACT_LINE}</span>`;
     panel.appendChild(intro);
     this.root.appendChild(panel);
   }
