@@ -177,15 +177,10 @@ function buildExperience({ renderer, scene, camera, worldRoot, isRunning, preTic
     nodes.BodyIdle, nodes.BodyAffirm, nodes.BodyThink,
     nodes.Head, nodes.FaceNeutral, nodes.FaceBlink, nodes.FaceTalk,
   ];
-  renderer.domElement.addEventListener("pointerdown", (e) => {
-    _downX = e.clientX; _downY = e.clientY; _downT = performance.now();
-  });
-  renderer.domElement.addEventListener("pointerup", (e) => {
-    if (Math.hypot(e.clientX - _downX, e.clientY - _downY) > 6) return;
-    if (performance.now() - _downT > 400) return;
+  function doTap(clientX, clientY) {
     const rect = renderer.domElement.getBoundingClientRect();
-    _tapNdc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-    _tapNdc.y = -(((e.clientY - rect.top) / rect.height) * 2 - 1);
+    _tapNdc.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+    _tapNdc.y = -(((clientY - rect.top) / rect.height) * 2 - 1);
     _ray.setFromCamera(_tapNdc, camera);
     // Aktivier-Phase: Tap auf die KARTE (unsichtbare Tap-Plane) startet die Figur
     if (controller.phase === "attract") {
@@ -194,7 +189,20 @@ function buildExperience({ renderer, scene, camera, worldRoot, isRunning, preTic
     }
     const hits = _ray.intersectObjects(figureMeshes.filter((m) => m.visible), false);
     if (hits.length > 0) startFigureJump();
+  }
+  renderer.domElement.addEventListener("pointerdown", (e) => {
+    _downX = e.clientX; _downY = e.clientY; _downT = performance.now();
   });
+  renderer.domElement.addEventListener("pointerup", (e) => {
+    if (Math.hypot(e.clientX - _downX, e.clientY - _downY) > 6) return;
+    if (performance.now() - _downT > 400) return;
+    doTap(e.clientX, e.clientY);
+  });
+  // FALLBACK (iOS): bricht der Browser die Pointer-Sequenz mit pointercancel
+  // ab, kommt nie ein pointerup — der native click feuert trotzdem. Doppel-
+  // Auslösung ist ungefährlich: onCardTapped ist über die Phase idempotent,
+  // der Figur-Sprung über figureJump.active.
+  renderer.domElement.addEventListener("click", (e) => doTap(e.clientX, e.clientY));
 
   /* ---- Render-Loop -------------------------------------------------------- */
   let lastT = performance.now();

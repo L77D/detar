@@ -97,7 +97,8 @@ export class ActivationFX {
     const w = SCENE.cardWidth;
     const h = w * SCENE.cardAspect;
     this.glow.scale.set(w * 1.15, h * 1.15, 1);
-    this.tapPlane.scale.set(w, h, 1);
+    // Tap-Fläche großzügiger als die Karte (leichter zu treffen, v. a. schräg)
+    this.tapPlane.scale.set(w * 1.25, h * 1.25, 1);
   }
 
   resetPart(p, randomPhase) {

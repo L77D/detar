@@ -43,7 +43,10 @@ html, body {
   height: 100%;
   overflow: hidden;
 }
-#ar-container canvas { position: absolute; inset: 0; }
+/* touch-action none: iOS darf Taps auf dem Canvas NICHT als potenzielle
+   Wisch-Geste interpretieren (sonst pointercancel statt pointerup —
+   Symptom: „Karte lässt sich nicht tappen"). */
+#ar-container canvas { position: absolute; inset: 0; touch-action: none; }
 
 /* --- Bottom-UI-Wurzel (QuestionMenu rendert hier hinein) ------------------- */
 #question-root {
