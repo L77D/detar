@@ -75,7 +75,7 @@ async function boot() {
     btn.disabled = true; // Spinner während Kamera/Tracking hochfahren
     // Gyro-Permission MUSS direkt in der User-Geste angefragt werden (iOS) —
     // deshalb hier, VOR allen awaits. Fail-safe: ohne Gyro läuft alles normal.
-    if (!DESKTOP_MODE && GYRO.enabled && !params.has("nogyro")) {
+    if (!DESKTOP_MODE && GYRO.enabled !== "nein" && !params.has("nogyro")) {
       gyro = new GyroFusion();
       gyro.enable(); // bewusst nicht awaiten (Geste nicht verlieren)
     }
@@ -117,7 +117,8 @@ function buildExperience({ renderer, scene, camera, worldRoot, isRunning, preTic
       camera.getWorldPosition(out);
       worldRoot.updateWorldMatrix(true, false);
       worldRoot.worldToLocal(out);
-      if (!Number.isFinite(out.x) || !Number.isFinite(out.y) || !Number.isFinite(out.z)) return null;
+      if (STAB.nanGuard !== "nein" &&
+          (!Number.isFinite(out.x) || !Number.isFinite(out.y) || !Number.isFinite(out.z))) return null;
       return out;
     },
     /* Welt → Karten-Frame (matrixWorld muss aktuell sein — getCamLocal wird

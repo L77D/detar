@@ -88,6 +88,17 @@ export const SCENE = {
 // = 1/1000 Kartenbreite (≈ 0,15 mm bei 15-cm-Karte); beta bezieht sich auf
 // Geschwindigkeit in Kartenbreiten/s.
 export const STAB = {
+  // --- Feature-Schalter (Dev-Panel „Tracking-Features an/aus") ---------------
+  // Jeder Baustein einzeln abschaltbar, um sein Verhalten zu isolieren.
+  enabled: "ja",     // 1 PoseStabilizer komplett (nein = rohe Anchor-Pose 1:1)
+  normalize: "ja",   // 2 Einheiten-Normierung auf Kartenbreiten (nein = Pixel-Skala,
+                     //   reproduziert den „Filter wirkungslos"-Zustand)
+  deadZones: "ja",   // 3 Snap-to-still (Position + Rotation)
+  lostHold: "ja",    // 4 letzte Pose bei Verlust kurz halten (nein = sofort weg)
+  nanGuard: "ja",    // 5 kaputte Posen verwerfen (nein = alter Verschwinde-Bug möglich!)
+  snap: "ja",        // 6 Re-Found-Snap statt Hinübergleiten
+  // 7 = GYRO.enabled · 8 = extrapolate (unten)
+
   // (a) MindAR-eingebauter Filter (Rohsignal, Defaults belassen)
   filterMinCF: 0.001,
   filterBeta: 1000,
@@ -137,7 +148,7 @@ export const ACTFX = {
 // Gyro-Fusion: Handy-Gyroskop stützt die visuelle Pose (Prediction) und
 // überbrückt kurze Tracking-Aussetzer. Kill-Switch zusätzlich per ?nogyro.
 export const GYRO = {
-  enabled: true,
+  enabled: "ja",
   bridgeMs: 1200,        // wie lange ein Aussetzer gyro-geführt überbrückt wird
   deltaDeadZone: 0.0012, // rad/Frame; kleinere Deltas = Sensor-Rauschen → ignorieren
   deltaMax: 0.2,         // rad/Frame; größere Deltas = Sensor-Glitch → verwerfen

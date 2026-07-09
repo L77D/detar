@@ -98,11 +98,13 @@ export class PoseStabilizer {
     // null = KEIN frisches Signal (keine Permission / kein Sensor / stale).
     const dq = this.gyro?.getDelta() ?? null;
 
+    const gyroOn = GYRO.enabled !== "nein";
+
     // --- Lost-Hold / Gyro-Brücke ----------------------------------------------
     if (this.tracking) this.lastSeenMs = now;
     if (!this.tracking) {
       const since = now - this.lastSeenMs;
-      if (dq && GYRO.enabled && this.everVisible && this.target.visible && since < GYRO.bridgeMs) {
+      if (dq && gyroOn && this.everVisible && this.target.visible && since < GYRO.bridgeMs) {
         // Gyro-Brücke: Kamera-Drehung wird kompensiert — die Figur bleibt
         // (ungefähr) auf der KARTE, nicht am Bildschirm.
         this.applyCameraDelta(dq);
@@ -113,33 +115,42 @@ export class PoseStabilizer {
       // lange Brücke — die eingefrorene Pose ist kamera-relativ und klebt am
       // BILDSCHIRM, sobald sich das Handy bewegt („Figur hängt im Bild").
       // Dann nur kurzer Flacker-Schutz (lostHoldMs), danach ausblenden.
-      const holdMs = dq ? GYRO.bridgeMs : STAB.lostHoldMs;
+      const holdMs = STAB.lostHold === "nein" ? 0 : (dq ? GYRO.bridgeMs : STAB.lostHoldMs);
       if (this.everVisible && since > holdMs) {
         this.target.visible = false;
       }
       return; // Pose eingefroren — nie aus einem Lost-Frame lesen (NaN-Quelle)
     }
 
+    // --- FEATURE-SCHALTER #1: Stabilizer komplett aus → rohe Anchor-Pose 1:1 ---
+    if (STAB.enabled === "nein") {
+      this.target.matrix.copy(this.source.matrix);
+      this.target.matrixWorldNeedsUpdate = true;
+      this.initialised = false; // beim Wieder-Einschalten sauber neu aufsetzen
+      return;
+    }
+
     // --- Gyro-PREDICTION: echte Kamera-Drehung sofort übernehmen ---------------
     // Das Sehen muss dann nur noch Drift/Translation korrigieren → der Filter
     // darf hart glätten, ohne dass die Figur bei Bewegung nachzieht.
-    if (dq && GYRO.enabled) this.applyCameraDelta(dq);
+    if (dq && gyroOn) this.applyCameraDelta(dq);
 
-    // --- Rohe kamera-relative Pose lesen + NaN-Schutz -------------------------
+    // --- Rohe kamera-relative Pose lesen + NaN-Schutz (#5) ----------------------
     this.source.matrix.decompose(_pos, _quat, _scale);
-    if (!finiteVec(_pos) || !finiteQuat(_quat) || !finiteVec(_scale) || _scale.x < 1e-8) {
+    if (STAB.nanGuard !== "nein" &&
+        (!finiteVec(_pos) || !finiteQuat(_quat) || !finiteVec(_scale) || _scale.x < 1e-8)) {
       return; // kaputter Frame → komplett verwerfen, letzte gute Pose steht
     }
 
-    // EINHEITEN-NORMIERUNG (Prüfstand-Befund 2026-07-08): MindARs Kamera-Raum
-    // ist PIXEL-skaliert (Anchor-Scale ≈ Target-Pixelbreite, Position z. B.
-    // z≈-4500). Gefiltert wird deshalb in KARTENBREITEN (pos / scale) — damit
-    // sind posDeadZone/beta einheitenfest, egal wie groß das Target ist.
-    _pos.divideScalar(_scale.x);
+    // EINHEITEN-NORMIERUNG (#2, Prüfstand-Befund 2026-07-08): MindARs Kamera-
+    // Raum ist PIXEL-skaliert (Anchor-Scale ≈ Target-Pixelbreite, Position
+    // z. B. z≈-4500). Gefiltert wird deshalb in KARTENBREITEN (pos / scale) —
+    // damit sind posDeadZone/beta einheitenfest, egal wie groß das Target ist.
+    if (STAB.normalize !== "nein") _pos.divideScalar(_scale.x);
 
-    // FIX 2026-07-08: Ist die gemessene Pose WEIT weg vom geglätteten Zustand
-    // (Re-Found nach Drift/Brücke), sofort SNAPPEN statt sichtbar hinüberzugleiten.
-    if (this.initialised &&
+    // FIX 2026-07-08 (#6): Ist die gemessene Pose WEIT weg vom geglätteten
+    // Zustand (Re-Found nach Drift/Brücke), sofort SNAPPEN statt zu gleiten.
+    if (STAB.snap !== "nein" && this.initialised &&
         (this.smoothPos.distanceTo(_pos) > STAB.snapDist ||
          this.smoothQuat.angleTo(_quat) > STAB.snapAngle)) {
       this.initialised = false;
@@ -176,8 +187,9 @@ export class PoseStabilizer {
     // --- One-Euro auf die Position (pro Achse) --------------------------------
     this.oneEuro(_pos, this.smoothPos, dt);
 
-    // Dead-Zone: winzige Restbewegung verwerfen (nur im RUHE-Zustand)
-    if (!moving && this.smoothPos.distanceTo(this.xPrev) < STAB.posDeadZone) {
+    // Dead-Zone (#3): winzige Restbewegung verwerfen (nur im RUHE-Zustand)
+    const dzOn = STAB.deadZones !== "nein";
+    if (dzOn && !moving && this.smoothPos.distanceTo(this.xPrev) < STAB.posDeadZone) {
       this.smoothPos.copy(this.xPrev);
     } else {
       this.xPrev.copy(this.smoothPos);
@@ -185,7 +197,7 @@ export class PoseStabilizer {
 
     // --- SLERP auf die Rotation ------------------------------------------------
     const angle = this.smoothQuat.angleTo(_quat);
-    if (angle > STAB.rotDeadZone || moving) {
+    if (angle > STAB.rotDeadZone || moving || !dzOn) {
       const t = Math.min(1, STAB.rotLerp * frameRatio);
       this.smoothQuat.slerp(_quat, t);
     }
@@ -284,7 +296,8 @@ export class PoseStabilizer {
 
   write() {
     // smoothPos ist in Kartenbreiten normiert → zurück in Anchor-Einheiten
-    _pos.copy(this.smoothPos).multiplyScalar(this.lastScale.x);
+    _pos.copy(this.smoothPos);
+    if (STAB.normalize !== "nein") _pos.multiplyScalar(this.lastScale.x);
     this.target.matrix.compose(_pos, this.smoothQuat, this.lastScale);
     this.target.matrixWorldNeedsUpdate = true;
   }

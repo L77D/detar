@@ -55,15 +55,19 @@ export class StatsOverlay {
     this.btn.style.cssText =
       "margin-top:6px;width:100%;pointer-events:auto;cursor:pointer;" +
       "font:bold 11px monospace;border:none;border-radius:6px;padding:5px 8px";
-    this.btn.onclick = () => { GYRO.enabled = !GYRO.enabled; this.paintBtn(); };
+    this.btn.onclick = () => {
+      GYRO.enabled = GYRO.enabled === "nein" ? "ja" : "nein";
+      this.paintBtn();
+    };
     this.paintBtn();
     this.box.appendChild(this.btn);
     document.body.appendChild(this.box);
   }
   paintBtn() {
-    this.btn.textContent = GYRO.enabled ? "Gyro AN — tippen: aus" : "Gyro AUS — tippen: an";
-    this.btn.style.background = GYRO.enabled ? "#ffdd00" : "#555";
-    this.btn.style.color = GYRO.enabled ? "#111" : "#eee";
+    const on = GYRO.enabled !== "nein";
+    this.btn.textContent = on ? "Gyro AN — tippen: aus" : "Gyro AUS — tippen: an";
+    this.btn.style.background = on ? "#ffdd00" : "#555";
+    this.btn.style.color = on ? "#111" : "#eee";
   }
   tick() {
     if (this.stab.tracking) {
@@ -81,7 +85,7 @@ export class StatsOverlay {
     if (now - this.lastDom < 500) return;
     this.lastDom = now;
     const f = (v) => (v == null ? "—" : v.toFixed(2) + " mm");
-    const gy = !GYRO.enabled ? "DEAKTIVIERT (Toggle)"
+    const gy = GYRO.enabled === "nein" ? "DEAKTIVIERT (Toggle)"
       : !this.gyro ? "aus (?nogyro/Desktop)"
       : !this.gyro.enabled ? "keine Permission"
       : this.gyro.active ? "AKTIV" : "enabled, keine Events";
