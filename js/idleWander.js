@@ -55,6 +55,20 @@ export class IdleWander {
       this.pickNextState(true);
     }
   }
+  /* Replay-Reset (Dev-Panel): sauber zurück auf Anfang. */
+  reset() {
+    this.state = "bop"; this.stateTime = 0; this.clock = 0;
+    this.heading = 0; this.rollSmooth = 0;
+    this.yawSmooth = 0; this.walkTarget = null;
+    this.attending = false; this.busy = false;
+    this.headSmoothY = this.headBaseRotY; this.headSmoothX = this.headBaseRotX;
+    this.element.rotation.y = 0;
+    this.element.rotation.z = this.figureBaseRotZ();
+    this.nodes.HeadPivot.rotation.y = this.headBaseRotY;
+    this.nodes.HeadNod.rotation.x = this.headBaseRotX;
+    this.nodes.BodyPivot.scale.set(1, 1, 1);
+    this.pickNextState(true);
+  }
   setBusy(value) {
     this.busy = value;
     if (value) {

@@ -39,6 +39,30 @@ dann `http://localhost:8080` öffnen.
   Choreographie/Verhalten am Rechner: `http://localhost:8080/?desktop`
 * **`?debug`** — pinke Hilfslinien (Lauffeld + FACE_CAM-Kegel), kombinierbar:
   `?desktop&debug`
+* **`?dev`** — Entwickler-Modus: Tuning-Panel (alle Regler des alten
+  Lokal-Prototyps, live) + **Theatre.js-Timeline** (visueller Keyframe-Editor).
+  Typisch: `?desktop&dev`. Regler-Stand bleibt in localStorage erhalten;
+  „tuning.json exportieren" erzeugt direkt die Repo-Datei.
+* **`?stats`** — Live-Diagnose am Handy: Tracking-/Gyro-Status, Jitter in mm,
+  Gyro-Toggle. **`?nogyro`** — Gyro-Fusion komplett aus.
+
+## Animationen / Timeline (Theatre.js)
+
+Autorisierte Animations-Beats werden visuell gekeyframed statt programmiert:
+
+1. `?desktop&dev` öffnen → Theatre-Studio erscheint (Outline links, Timeline
+   unten). Objekt „Beats / Figur" animiert den `BeatRoot`-Wrapper
+   (posX/Y/Z, rotY/Z, scale) — die reaktiven Behaviors (IdleWander, FACE_CAM)
+   laufen unabhängig weiter und addieren sich dazu.
+2. Keyframes setzen, scrubben, Kurven im Studio editieren;
+   „▶ Timeline" im Dev-Panel spielt die Sequenz ab.
+3. Dev-Panel → „Timeline exportieren" → die Datei als **`beats.theatre.json`**
+   ins Repo-Root legen und pushen.
+4. Live lädt die App nur den schlanken Player + diese JSON (ohne die Datei
+   und ohne `?dev` wird Theatre gar nicht geladen).
+
+Reaktives Verhalten (Watscheln, Kamera-Blick, Billboard) bleibt bewusst Code —
+das lässt sich nicht keyframen, weil es auf die Kamera reagiert.
 
 Am Handy testen ohne Deploy: Rechner und Handy im selben WLAN, dann
 `http://<rechner-ip>:8080` — Achtung, Kamera geht nur über HTTPS; für echte

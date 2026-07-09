@@ -35,10 +35,16 @@ const A = "./assets/character/";
 
 /* Baut das komplette Rig unter `parent` und liefert alle Knoten zurück. */
 export function buildRig(parent) {
+  // BeatRoot: neutraler Wrapper für AUTORISIERTE Animationen (Theatre.js-
+  // Timeline). Behaviors fassen nur FigureRoot an, die Timeline nur BeatRoot —
+  // beide addieren sich, ohne sich in die Quere zu kommen.
+  const BeatRoot = new THREE.Group();
+  parent.add(BeatRoot);
+
   const FigureRoot = new THREE.Group();
   FigureRoot.position.set(0, 0.06241394743147513, 0);
   FigureRoot.scale.setScalar(0.12759215518606418);
-  parent.add(FigureRoot);
+  BeatRoot.add(FigureRoot);
 
   const BodyPivot = new THREE.Group();
   BodyPivot.position.set(0, -0.4897775782082088, 0);
@@ -73,7 +79,7 @@ export function buildRig(parent) {
   HeadNod.add(FaceNeutral, FaceBlink, FaceTalk);
 
   const nodes = {
-    FigureRoot, BodyPivot, HeadPivot, HeadNod, Head,
+    BeatRoot, FigureRoot, BodyPivot, HeadPivot, HeadNod, Head,
     BodyIdle, BodyAffirm, BodyThink,
     FaceNeutral, FaceBlink, FaceTalk,
   };

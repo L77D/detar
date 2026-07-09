@@ -41,6 +41,7 @@ const DESKTOP_MODE = params.has("desktop");
 // Debug NUR per URL (?debug) — SCENE.debug aus einem tuning.json-Preset wird
 // bewusst ignoriert (Leftover aus Tuning-Sessions soll nie live erscheinen).
 const DEBUG_MODE = params.has("debug");
+const DEV_MODE = params.has("dev"); // Tuning-Panel + Theatre.js-Studio
 
 const el = (id) => document.getElementById(id);
 let gyro = null; // GyroFusion — wird in der START-Geste angelegt (iOS-Permission)
@@ -197,7 +198,26 @@ function buildExperience({ renderer, scene, camera, worldRoot, isRunning, preTic
     renderer.render(scene, camera);
   }
 
-  return { controller, bubble, loop };
+  return { controller, bubble, loop, nodes };
+}
+
+/* --------------------------------------------------------------------------
+   Dev-Werkzeuge: Theatre.js-Timeline (Beats) + Tuning-Panel.
+   Timeline lädt auch OHNE ?dev, wenn ein gespeicherter Stand
+   (beats.theatre.json) existiert — dann nur der schlanke Player.
+   -------------------------------------------------------------------------- */
+async function attachDevTools(exp) {
+  let timeline = null;
+  try {
+    const { initTimeline } = await import("./timeline.js");
+    timeline = await initTimeline({ nodes: exp.nodes, withStudio: DEV_MODE });
+  } catch (e) {
+    console.warn("Timeline nicht verfügbar:", e);
+  }
+  if (DEV_MODE) {
+    const { DevPanel } = await import("./devPanel.js");
+    new DevPanel({ bubble: exp.bubble, nodes: exp.nodes, controller: exp.controller, timeline });
+  }
 }
 
 /* --------------------------------------------------------------------------
@@ -238,13 +258,15 @@ async function startAR() {
   // ?stats — Live-Diagnose am Gerät (Tracking/Gyro/Jitter in Zahlen)
   const stats = params.has("stats") ? new StatsOverlay(anchor.group, stabRoot, stab, gyro) : null;
 
-  const { controller, loop } = buildExperience({
+  const exp = buildExperience({
     renderer, scene, camera, worldRoot,
     /* Behavior-Ticks nur, solange die Figur sichtbar ist — verhindert, dass
        Lost-Frames (NaN-Quelle) in die Zustands-Lerps einsickern. */
     isRunning: () => stabRoot.visible,
     preTick: () => { stab.tick(); stats?.tick(); },
   });
+  const { controller, loop } = exp;
+  await attachDevTools(exp);
 
   const hint = el("trackingHint");
   anchor.onTargetFound = () => {
@@ -310,7 +332,9 @@ async function startDesktop() {
   const worldRoot = new THREE.Group();
   scene.add(worldRoot);
 
-  const { controller, loop } = buildExperience({ renderer, scene, camera, worldRoot });
+  const exp = buildExperience({ renderer, scene, camera, worldRoot });
+  const { controller, loop } = exp;
+  await attachDevTools(exp);
 
   window.addEventListener("resize", () => {
     renderer.setSize(window.innerWidth, window.innerHeight);

@@ -7,6 +7,21 @@
 import { CHOREO } from "./config.js";
 
 export class CardController {
+  /* Replay (Dev-Panel): kompletter Reset + erneuter „Scan". */
+  replay() {
+    if (this.idleTimer !== null) { clearTimeout(this.idleTimer); this.idleTimer = null; }
+    this.activation.cancel();
+    this.bubble.hide();
+    this.face.setTalking(false);
+    this.menu.reset();
+    this.setPose("idle");
+    this.nodes.FigureRoot.position.copy(this.nodes.FIGURE_HOME.pos);
+    this.nodes.FigureRoot.scale.copy(this.nodes.FIGURE_HOME.scale);
+    this.wander.reset();
+    this.greeted = false;
+    window.setTimeout(() => this.onCardSeen(), 600);
+  }
+
   constructor({ card, nodes, bubble, face, wander, activation, menu }) {
     this.data = card;
     this.nodes = nodes;
@@ -63,7 +78,8 @@ export class CardController {
      damit reine Lesezeit, unabhängig von der Textlänge. */
   scheduleIdleReturn() {
     if (this.idleTimer !== null) clearTimeout(this.idleTimer);
-    const delay = this.data.idleReturnMs ?? CHOREO.idleReturnMs ?? 3500;
+    // CHOREO gewinnt (Dev-Panel/tuning.json regelbar), Karte ist Fallback.
+    const delay = CHOREO.idleReturnMs ?? this.data.idleReturnMs ?? 3500;
     this.idleTimer = window.setTimeout(() => {
       this.setPose("idle");
       this.wander.setBusy(false);

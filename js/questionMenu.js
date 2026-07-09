@@ -80,4 +80,9 @@ export class QuestionMenu {
   clearSelection() {
     this.root.querySelectorAll(".detar-q-btn.selected").forEach((el) => el.classList.remove("selected"));
   }
+  /* Replay-Reset (Dev-Panel): zurück in den Onboarding-Zustand. */
+  reset() {
+    this.revealed = false;
+    this.renderOnboarding();
+  }
 }
