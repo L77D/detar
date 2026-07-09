@@ -49,9 +49,17 @@ let gyro = null; // GyroFusion — wird in der START-Geste angelegt (iOS-Permiss
 /* --------------------------------------------------------------------------
    Splash befüllen + Start-Button freigeben, sobald Tuning + Font geladen sind.
    -------------------------------------------------------------------------- */
+let phoneFrame = null; // Desktop-Modus: Smartphone-Rahmen (wie im Lokal-Prototyp)
+
 async function boot() {
   await loadTuning();
   syncCssVars();
+
+  // Rahmen VOR dem Splash aufbauen, damit schon der Startscreen im Phone sitzt
+  if (DESKTOP_MODE) {
+    const { PhoneFrame } = await import("./phoneFrame.js");
+    phoneFrame = new PhoneFrame();
+  }
 
   el("cardName").textContent = card.profession;
   const logoLink = el("detLogo");
@@ -296,14 +304,22 @@ async function startDesktop() {
 
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-  renderer.setSize(window.innerWidth, window.innerHeight);
   container.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(SCENE.bgColor);
 
-  const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.01, 20);
+  const camera = new THREE.PerspectiveCamera(55, 1, 0.01, 20);
   camera.position.set(0, 0.24, 0.34);
+
+  // Größe kommt vom Phone-Rahmen (Format-Preset oben links)
+  const sizeTo = (w, h) => {
+    renderer.setSize(w, h);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  };
+  sizeTo(phoneFrame.w, phoneFrame.h);
+  phoneFrame.onResize = sizeTo;
 
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.target.set(0, 0.09, 0);
@@ -335,12 +351,6 @@ async function startDesktop() {
   const exp = buildExperience({ renderer, scene, camera, worldRoot });
   const { controller, loop } = exp;
   await attachDevTools(exp);
-
-  window.addEventListener("resize", () => {
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-  });
 
   renderer.setAnimationLoop(() => {
     controls.update();
