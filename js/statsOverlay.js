@@ -7,6 +7,7 @@
    beta hoch, bis Bewegung ohne Nachziehen folgt.
    ============================================================================= */
 import * as THREE from "three";
+import { GYRO } from "./config.js";
 
 const _p = new THREE.Vector3();
 const _q = new THREE.Quaternion();
@@ -40,12 +41,29 @@ export class StatsOverlay {
     this.raw = new Ring();
     this.smooth = new Ring();
     this.lastDom = 0;
-    this.el = document.createElement("div");
-    this.el.style.cssText =
+    this.box = document.createElement("div");
+    this.box.style.cssText =
       "position:fixed;top:calc(140px + env(safe-area-inset-top));right:8px;z-index:50;" +
-      "background:rgba(0,0,0,0.72);color:#0f0;font:11px/1.5 monospace;" +
-      "padding:8px 10px;border-radius:8px;pointer-events:none;white-space:pre";
-    document.body.appendChild(this.el);
+      "background:rgba(0,0,0,0.72);border-radius:8px;padding:8px 10px;" +
+      "font:11px/1.5 monospace;pointer-events:none";
+    this.el = document.createElement("div");
+    this.el.style.cssText = "color:#0f0;white-space:pre";
+    this.box.appendChild(this.el);
+    // Gyro-Toggle: GYRO.enabled wird pro Frame geprüft → wirkt sofort.
+    // Kill-Switch-Vergleich am Gerät ohne Neuladen (Jitter mit/ohne Gyro).
+    this.btn = document.createElement("button");
+    this.btn.style.cssText =
+      "margin-top:6px;width:100%;pointer-events:auto;cursor:pointer;" +
+      "font:bold 11px monospace;border:none;border-radius:6px;padding:5px 8px";
+    this.btn.onclick = () => { GYRO.enabled = !GYRO.enabled; this.paintBtn(); };
+    this.paintBtn();
+    this.box.appendChild(this.btn);
+    document.body.appendChild(this.box);
+  }
+  paintBtn() {
+    this.btn.textContent = GYRO.enabled ? "Gyro AN — tippen: aus" : "Gyro AUS — tippen: an";
+    this.btn.style.background = GYRO.enabled ? "#ffdd00" : "#555";
+    this.btn.style.color = GYRO.enabled ? "#111" : "#eee";
   }
   tick() {
     if (this.stab.tracking) {
@@ -63,7 +81,8 @@ export class StatsOverlay {
     if (now - this.lastDom < 500) return;
     this.lastDom = now;
     const f = (v) => (v == null ? "—" : v.toFixed(2) + " mm");
-    const gy = !this.gyro ? "aus (?nogyro/Desktop)"
+    const gy = !GYRO.enabled ? "DEAKTIVIERT (Toggle)"
+      : !this.gyro ? "aus (?nogyro/Desktop)"
       : !this.gyro.enabled ? "keine Permission"
       : this.gyro.active ? "AKTIV" : "enabled, keine Events";
     this.el.textContent =
