@@ -104,8 +104,8 @@ export class DevPanel {
         { o: PORTAL, k: "fadeSec", l: "Bildwechsel-Fade (s)", min: 0.05, max: 1.5, step: 0.05 },
         { o: PORTAL, k: "showSec", l: "Ein-/Ausblenden (s)", min: 0.05, max: 1.5, step: 0.05 },
         { o: PORTAL, k: "flipSec", l: "Figur-Flip Dauer (s)", min: 0.2, max: 2, step: 0.05 },
+        { o: PORTAL, k: "figureScale", l: "Figur-Größe im Einblick", min: 0.1, max: 1, step: 0.01 },
         { o: PORTAL, k: "flipHeight", l: "Figur-Flip Höhe", min: 0, max: 0.2, step: 0.005 },
-        { o: PORTAL, k: "flatY", l: "Liegehöhe", min: 0.001, max: 0.02, step: 0.001 },
       ]},
       { g: "Tracking-Features an/aus (nur AR)", items: [
         { o: STAB, k: "enabled", l: "1 Glättung (PoseStabilizer)", options: ["ja", "nein"] },

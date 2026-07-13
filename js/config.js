@@ -162,9 +162,11 @@ export const PORTAL = {
   minCamY: 0.02,     // Kamera flacher als das → Offset einfrieren (degeneriert)
   fadeSec: 0.35,     // Crossfade beim Galerie-Wechsel
   showSec: 0.4,      // Ein-/Ausblenden des Portals beim Tab-Wechsel
-  flipSec: 0.7,      // Figur-Sprung + Hinlegen (Dauer)
+  flipSec: 0.7,      // Figur-Sprung zur Portal-Oberkante (Dauer)
   flipHeight: 0.06,  // Bogenhöhe des Sprungs
-  flatY: 0.004,      // Liegehöhe der Figur über der Karte (über Glow/Portal)
+  figureScale: 0.33, // Figur-Größe im Einblick (Faktor; Figur stellt sich
+                     // verkleinert an die OBERKANTE des Portal-Fensters —
+                     // geändert 2026-07-13, vorher: flach hinlegen/flatY)
 };
 
 // Gyro-Fusion: Handy-Gyroskop stützt die visuelle Pose (Prediction) und

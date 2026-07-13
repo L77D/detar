@@ -242,13 +242,19 @@ export class PortalView {
 }
 
 /* =============================================================================
-   FigureFlip — Sprung der Figur zur Kartenmitte + Hinlegen (plan zur Karte).
+   FigureFlip — Einblick-Pose der Figur (GEÄNDERT 2026-07-13):
+   Sie legt sich NICHT mehr flach (verdeckte das Portal-Bild), sondern springt
+   per Parabel an die OBERKANTE des Portal-Fensters und stellt sich dort
+   VERKLEINERT auf (PORTAL.figureScale, Default ⅓) — wie eine Moderatorin
+   neben dem Bild. Füße bleiben auf der Kartenebene (y skaliert mit).
+   toUpright() kehrt zu FIGURE_HOME (Position + volle Größe) zurück.
+   API unverändert: toFlat()/toUpright() — Name historisch.
    ============================================================================= */
 export class FigureFlip {
   constructor(nodes) {
     this.nodes = nodes;
     this.active = false;
-    this.flat = false;      // liegt die Figur gerade (Einblick-Modus)?
+    this.flat = false;      // Einblick-Pose aktiv?
     this.t = 0;
     this.from = null;
     this.to = null;
@@ -260,7 +266,7 @@ export class FigureFlip {
 
   start(toFlat, onDone) {
     const el = this.nodes.FigureRoot;
-    const home = this.nodes.FIGURE_HOME.pos;
+    const home = this.nodes.FIGURE_HOME;
     this.active = true;
     this.targetFlat = toFlat;
     this.t = 0;
@@ -268,10 +274,15 @@ export class FigureFlip {
     this.from = {
       x: el.position.x, y: el.position.y, z: el.position.z,
       rx: el.rotation.x, ry: normalizeAngle(el.rotation.y),
+      sc: el.scale.x / home.scale.x, // aktueller Größen-Faktor
     };
+    // Oberkante des Portal-Fensters (Karten-Frame: −Z = Karten-Oberkante).
+    const winH = SCENE.cardWidth * SCENE.cardAspect * PORTAL.windowH;
+    const s = Math.max(0.05, PORTAL.figureScale);
     this.to = toFlat
-      ? { x: 0, y: PORTAL.flatY, z: 0, rx: -Math.PI / 2, ry: 0 }
-      : { x: home.x, y: home.y, z: home.z, rx: 0, ry: 0 };
+      // y skaliert mit, damit die Füße auf der Kartenebene bleiben
+      ? { x: 0, y: home.pos.y * s, z: -winH / 2, rx: 0, ry: 0, sc: s }
+      : { x: home.pos.x, y: home.pos.y, z: home.pos.z, rx: 0, ry: 0, sc: 1 };
   }
 
   tick(dt) {
@@ -280,30 +291,35 @@ export class FigureFlip {
     const k = Math.min(1, this.t / Math.max(0.05, PORTAL.flipSec));
     const e = k * k * (3 - 2 * k); // smoothstep
     const el = this.nodes.FigureRoot;
+    const home = this.nodes.FIGURE_HOME;
     el.position.x = THREE.MathUtils.lerp(this.from.x, this.to.x, e);
     el.position.z = THREE.MathUtils.lerp(this.from.z, this.to.z, e);
     el.position.y = THREE.MathUtils.lerp(this.from.y, this.to.y, e)
       + Math.sin(Math.PI * k) * PORTAL.flipHeight;
-    el.rotation.x = THREE.MathUtils.lerp(this.from.rx, this.to.rx, e);
+    el.rotation.x = THREE.MathUtils.lerp(this.from.rx, 0, e); // immer aufrecht enden
     el.rotation.y = THREE.MathUtils.lerp(this.from.ry, this.to.ry, e);
+    const sc = THREE.MathUtils.lerp(this.from.sc, this.to.sc, e);
+    el.scale.set(home.scale.x * sc, home.scale.y * sc, home.scale.z * sc);
     if (k >= 1) {
       this.active = false;
       this.flat = this.targetFlat;
       el.position.set(this.to.x, this.to.y, this.to.z);
-      el.rotation.x = this.to.rx;
+      el.rotation.x = 0;
       el.rotation.y = this.to.ry;
+      el.scale.set(home.scale.x * this.to.sc, home.scale.y * this.to.sc, home.scale.z * this.to.sc);
       const cb = this.onDone;
       this.onDone = null;
       cb?.();
     }
   }
 
-  /* Replay-Reset: hart aufrecht; Position setzt CardController.replay. */
+  /* Replay-Reset: hart aufrecht + volle Größe; Position setzt CardController.replay. */
   reset() {
     this.active = false;
     this.flat = false;
     this.onDone = null;
     this.nodes.FigureRoot.rotation.x = 0;
+    this.nodes.FigureRoot.scale.copy(this.nodes.FIGURE_HOME.scale);
   }
 }
 
