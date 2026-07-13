@@ -61,12 +61,40 @@ export class PoseStabilizer {
     this.lastClockMs = 0;
 
     // Bewegungs-Extrapolation: letzte ECHTE Messung + geschätzte Geschwindigkeit
-    this.measPos = new THREE.Vector3();     // letzte neue Messung (Kartenbreiten)
+    this.measPos = new THREE.Vector3();     // letzte neue Messung (Kartenbreiten,
+                                            // wird von der Gyro-Prediction MITGEDREHT)
     this.measQuat = new THREE.Quaternion();
     this.measT = 0;                         // Zeitpunkt der Messung
     this.vel = new THREE.Vector3();         // Kartenbreiten/s (geglättet)
     this.angVel = new THREE.Vector3();      // Achse*rad/s (geglättet)
     this.hasMeas = false;
+
+    // FIX 2026-07-13: Stale-Erkennung braucht die UNGEDREHTE Rohpose. measPos
+    // wird vom Gyro mitrotiert — der Vergleich damit meldete bei Handy-Drehung
+    // jeden stale Frame als „neue Messung" (Mini-dt, Rückwärts-Geschwindigkeit)
+    // und vergiftete die Bewegungsschätzung.
+    this.rawPrev = new THREE.Vector3();
+    this.rawPrevQ = new THREE.Quaternion();
+    this.hasRaw = false;
+
+    // Bewegt-Zustand mit Hysterese + Verweilzeit (statt binärem Flackern)
+    this.moving = false;
+    this.lastAboveMs = 0;
+
+    // DRIFT-Detektor (Fix 2026-07-13): „bewegt sich" wird an der Verschiebung
+    // über ein ~250-ms-Fenster gemessen, nicht an der Momentan-Geschwindigkeit.
+    // Hand-Tremor pendelt um einen Punkt (Drift ≈ 0), echte Bewegung
+    // akkumuliert Strecke — Momentan-Geschwindigkeit kann beides nicht
+    // unterscheiden (Tremor erreicht kurzzeitig hohe Werte).
+    this.snapOld = { p: new THREE.Vector3(), q: new THREE.Quaternion(), t: 0, ok: false };
+    this.snapNew = { p: new THREE.Vector3(), q: new THREE.Quaternion(), t: 0, ok: false };
+    this.driftSpeed = 0;
+    this.driftAngSpeed = 0;
+
+    // Vision-Messrate (für ?stats)
+    this.measCount = 0;
+    this.hzWindowT = 0;
+    this.visionHz = null;
   }
 
   onFound() {
@@ -166,8 +194,16 @@ export class PoseStabilizer {
       this.measQuat.copy(_quat);
       this.measT = now;
       this.hasMeas = true;
+      this.rawPrev.copy(_pos);
+      this.rawPrevQ.copy(_quat);
+      this.hasRaw = true;
       this.vel.set(0, 0, 0);
       this.angVel.set(0, 0, 0);
+      this.moving = false;
+      this.snapOld.ok = false;
+      this.snapNew.ok = false;
+      this.driftSpeed = 0;
+      this.driftAngSpeed = 0;
       this.initialised = true;
       this.write();
       return;
@@ -195,37 +231,64 @@ export class PoseStabilizer {
       this.xPrev.copy(this.smoothPos);
     }
 
-    // --- SLERP auf die Rotation ------------------------------------------------
+    // --- ADAPTIVE Rotations-Glättung (One-Euro-Prinzip, 2026-07-13) -------------
+    // Vorher fixer SLERP-Faktor: ließ in Ruhe 35 % des Rotations-Rauschens
+    // durch und hing bei schnellen Drehungen nach. Jetzt: Cutoff wächst mit
+    // der gemessenen Winkelgeschwindigkeit — Ruhe = dicht, Drehung = wach.
     const angle = this.smoothQuat.angleTo(_quat);
     if (angle > STAB.rotDeadZone || moving || !dzOn) {
-      const t = Math.min(1, STAB.rotLerp * frameRatio);
+      const rotCutoff = STAB.rotMinCutoff + STAB.rotBeta * this.angVel.length();
+      const t = Math.min(1, this.alpha(dt, rotCutoff));
       this.smoothQuat.slerp(_quat, t);
     }
 
     this.write();
   }
 
-  /* Neue Vision-Messung erkennen (Pose unterscheidet sich von der letzten) und
-     lineare + Winkel-Geschwindigkeit schätzen (geglättet, 50/50-Lerp). */
+  /* Neue Vision-Messung erkennen (ROHPOSE unterscheidet sich von der letzten —
+     ungedreht, damit die Gyro-Prediction keine Fehl-Messungen erzeugt) und
+     lineare + Winkel-Geschwindigkeit schätzen (geglättet, 50/50-Lerp).
+     Die Geschwindigkeit selbst wird gegen die GYRO-KOMPENSIERTE measPos
+     gerechnet — Kamera-Drehung ist damit herausgerechnet, übrig bleibt die
+     echte Karten-Bewegung. */
   updateMotionEstimate(now) {
-    const dPos = _pos.distanceTo(this.measPos);
-    const dAng = this.measQuat.angleTo(_quat);
-    if (dPos < 1e-6 && dAng < 1e-6) return; // stale Frame — keine neue Messung
+    // Vision-Hz-Fenster (für ?stats)
+    if (now - this.hzWindowT > 1000) {
+      this.visionHz = this.measCount;
+      this.measCount = 0;
+      this.hzWindowT = now;
+    }
+
+    const isNew = !this.hasRaw ||
+      _pos.distanceTo(this.rawPrev) > 1e-6 || this.rawPrevQ.angleTo(_quat) > 1e-6;
+    this.rawPrev.copy(_pos);
+    this.rawPrevQ.copy(_quat);
+    this.hasRaw = true;
+    if (!isNew) return; // stale Frame — MindAR hat nicht neu gemessen
+    this.measCount++;
     const dtMeas = Math.min(0.5, Math.max(0.005, (now - this.measT) / 1000));
 
-    // linear
-    const vx = (_pos.x - this.measPos.x) / dtMeas;
-    const vy = (_pos.y - this.measPos.y) / dtMeas;
-    const vz = (_pos.z - this.measPos.z) / dtMeas;
-    if (Number.isFinite(vx)) this.vel.lerp({ x: vx, y: vy, z: vz }, 0.5);
+    // RAUSCH-SCHWELLE (Fix 2026-07-13): Verschiebungen unterhalb der Dead-Zone
+    // sind Mess-Rauschen — daraus KEINE Geschwindigkeit schätzen, sondern die
+    // Schätzung abklingen lassen. Sonst hält Ruhe-Rauschen den Bewegt-Modus
+    // fälschlich am Leben und die Latenz-Kompensation VERSTÄRKT das Rauschen.
+    const dPosMeas = _pos.distanceTo(this.measPos);
+    if (dPosMeas > STAB.posDeadZone) {
+      const vx = (_pos.x - this.measPos.x) / dtMeas;
+      const vy = (_pos.y - this.measPos.y) / dtMeas;
+      const vz = (_pos.z - this.measPos.z) / dtMeas;
+      if (Number.isFinite(vx)) this.vel.lerp({ x: vx, y: vy, z: vz }, 0.5);
+    } else {
+      this.vel.multiplyScalar(0.5);
+    }
 
     // Winkel: dq = meas⁻¹ ⊗ neu → Achse*Winkel/Zeit (im Mess-lokalen Frame)
     _dq.copy(this.measQuat).invert().multiply(_quat);
     if (_dq.w < 0) { _dq.x *= -1; _dq.y *= -1; _dq.z *= -1; _dq.w *= -1; } // kürzester Weg
     const s = Math.sqrt(Math.max(0, 1 - _dq.w * _dq.w));
-    if (s > 1e-6) {
-      const ang = 2 * Math.acos(Math.min(1, _dq.w));
-      _axis.set(_dq.x / s, _dq.y / s, _dq.z / s).multiplyScalar(ang / dtMeas);
+    const angMeas = 2 * Math.acos(Math.min(1, _dq.w));
+    if (s > 1e-6 && angMeas > STAB.rotDeadZone) {
+      _axis.set(_dq.x / s, _dq.y / s, _dq.z / s).multiplyScalar(angMeas / dtMeas);
       this.angVel.lerp(_axis, 0.5);
     } else {
       this.angVel.multiplyScalar(0.5);
@@ -234,19 +297,58 @@ export class PoseStabilizer {
     this.measPos.copy(_pos);
     this.measQuat.copy(_quat);
     this.measT = now;
+
+    // Drift-Fenster fortschreiben (Snapshots alle ~250 ms)
+    if (!this.snapNew.ok) {
+      this.snapNew.p.copy(_pos); this.snapNew.q.copy(_quat);
+      this.snapNew.t = now; this.snapNew.ok = true;
+    } else if (now - this.snapNew.t > 250) {
+      this.snapOld.p.copy(this.snapNew.p); this.snapOld.q.copy(this.snapNew.q);
+      this.snapOld.t = this.snapNew.t; this.snapOld.ok = true;
+      this.snapNew.p.copy(_pos); this.snapNew.q.copy(_quat); this.snapNew.t = now;
+    }
+    if (this.snapOld.ok) {
+      const dtW = Math.max(0.1, (now - this.snapOld.t) / 1000);
+      // Geglättet (EMA): einzelne Tremor-Spitzen am Fensterrand dürfen den
+      // Bewegt-Modus nicht zünden; echte Bewegung hebt das Signal in ~200 ms.
+      this.driftSpeed += (_pos.distanceTo(this.snapOld.p) / dtW - this.driftSpeed) * 0.25;
+      this.driftAngSpeed += (this.snapOld.q.angleTo(_quat) / dtW - this.driftAngSpeed) * 0.25;
+    }
   }
 
   /* Zwischen den Messungen: Ziel-Pose (_pos/_quat) per Geschwindigkeit
-     vorhersagen. Liefert true, wenn die Karte gerade als „in Bewegung" gilt. */
+     vorhersagen. Liefert true, wenn die Karte gerade als „in Bewegung" gilt.
+
+     HYSTERESE + VERWEILZEIT (2026-07-13): Einschalten ab minSpeed, Ausschalten
+     erst unter der HALBEN Schwelle UND nachdem moveDwellMs lang keine
+     Bewegung mehr über der Einschalt-Schwelle war — kein Regime-Flackern an
+     der Grenze mehr (das war das „produziert zu schnell wieder Zittern").
+
+     LATENZ-KOMPENSATION (2026-07-13): Jede Vision-Messung ist bei Ankunft
+     schon ~latencyMs alt (Verarbeitungszeit) — die Prediction rechnet dieses
+     Alter mit ein, sonst läuft die Figur der Karte konstant hinterher. */
   applyExtrapolation(now) {
-    const speed = this.vel.length();
-    const angSpeed = this.angVel.length();
-    const moving = speed > STAB.minSpeed || angSpeed > STAB.minAngSpeed;
+    // Bewegt-Entscheidung über die FENSTER-DRIFT (tremor-fest), nicht über
+    // die Momentan-Geschwindigkeit (die dient nur der Vorhersage selbst).
+    const speed = this.driftSpeed;
+    const angSpeed = this.driftAngSpeed;
+    const above = speed > STAB.minSpeed || angSpeed > STAB.minAngSpeed;
+    if (above) {
+      this.moving = true;
+      this.lastAboveMs = now;
+    } else if (this.moving && now - this.lastAboveMs > STAB.moveDwellMs) {
+      // Rückfall: dwellMs lang KEIN Überschreiten mehr → zurück in Ruhe.
+      // (Kein „Band-Halten" mehr — das hielt den Bewegt-Modus bei Tremor
+      // dauerhaft fest, Diagnose 2026-07-13: 100 % Bewegt-Quote in Ruhe.)
+      this.moving = false;
+    }
+    const moving = this.moving;
     if (STAB.extrapolate === "nein" || !moving) return moving;
-    const tp = Math.min(now - this.measT, STAB.extrapMaxMs) / 1000;
+    const tp = (Math.min(now - this.measT, STAB.extrapMaxMs) + STAB.latencyMs) / 1000;
     if (tp <= 0) return moving;
     _pos.copy(this.measPos).addScaledVector(this.vel, tp);
-    const ang = angSpeed * tp;
+    const angV = this.angVel.length();
+    const ang = angV * tp;
     if (ang > 1e-5) {
       _axis.copy(this.angVel).normalize();
       _predQ.setFromAxisAngle(_axis, ang);
@@ -271,10 +373,12 @@ export class PoseStabilizer {
     this.smoothPos.applyQuaternion(_dqInv);
     this.xPrev.applyQuaternion(_dqInv);
     this.dxPrev.applyQuaternion(_dqInv);
-    // Bewegungs-Schätzung mitdrehen (Kamera-Frame hat sich gedreht)
+    // Bewegungs-Schätzung + Drift-Snapshots mitdrehen (Kamera-Frame gedreht)
     this.measPos.applyQuaternion(_dqInv);
     this.measQuat.premultiply(_dqInv);
     this.vel.applyQuaternion(_dqInv);
+    if (this.snapOld.ok) { this.snapOld.p.applyQuaternion(_dqInv); this.snapOld.q.premultiply(_dqInv); }
+    if (this.snapNew.ok) { this.snapNew.p.applyQuaternion(_dqInv); this.snapNew.q.premultiply(_dqInv); }
   }
 
   oneEuro(targetV, out, dt) {

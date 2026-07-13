@@ -103,13 +103,16 @@ export const STAB = {
   filterMinCF: 0.001,
   filterBeta: 1000,
   missTolerance: 5,     // Frames "Karte kurz verloren" aushalten
-  warmupTolerance: 5,   // Frames bis "Karte gefunden" gemeldet wird
+  warmupTolerance: 3,   // Frames bis "Karte gefunden" gemeldet wird (5→3
+                        // 2026-07-13: schnelleres Anspringen beim Scan)
 
   // (b) PoseStabilizer — Haupt-Glättung (Werte prüfstand-kalibriert 2026-07-08)
   minCutoff: 1.0,       // Grund-Glättung in Ruhe. KLEINER = ruhiger, aber träger
   beta: 0.002,          // wie stark Bewegung die Glättung löst. GRÖSSER = wacher
   dCutoff: 1.0,         // Glättung der Geschwindigkeitsschätzung (selten anfassen)
-  rotLerp: 0.35,        // SLERP-Faktor pro Frame @60Hz. KLEINER = ruhiger/träger
+  rotMinCutoff: 1.5,    // Rotations-Glättung in Ruhe (Hz). KLEINER = ruhiger/träger
+  rotBeta: 4.0,         // wie stark Drehgeschwindigkeit die Glättung öffnet
+                        // (adaptiv 2026-07-13 — ersetzt den fixen rotLerp)
   posDeadZone: 0.001,   // Kartenbreiten; darunter kein Update → Figur steht 100% still
   rotDeadZone: 0.0015,  // dito Rotation (Radiant)
   lostHoldMs: 250,      // letzte gute Pose so lange halten, bevor ausgeblendet
@@ -123,9 +126,14 @@ export const STAB = {
   // flüssig in Bewegung.
   extrapolate: "ja",
   extrapMaxMs: 150,     // max. so lange vorhersagen (dann halten)
-  minSpeed: 0.06,       // Kartenbreiten/s; darunter gilt „steht" (kein Extrapolieren,
-                        // Dead-Zone aktiv). Verdoppelt 2026-07-09: 0.03 sprang
-                        // durch Mess-Rauschen zu schnell in den Bewegt-Modus → Zittern.
+  latencyMs: 40,        // Alter der Vision-Messung (Verarbeitungszeit) — wird
+                        // im Bewegt-Modus zusätzlich vorhergesagt (weniger Nachlauf)
+  moveDwellMs: 250,     // so lange muss die Bewegung unter die HALBE Schwelle
+                        // fallen, bevor zurück in den Ruhe-Modus (Hysterese)
+  minSpeed: 0.1,        // Kartenbreiten/s FENSTER-DRIFT; darunter gilt „steht".
+                        // (2026-07-13: Bewegt-Erkennung läuft jetzt über geglättete
+                        // 250-ms-Drift statt Momentan-Geschwindigkeit — tremor-fest;
+                        // 0.1 = Bewegungen ab ~1,5 cm/s zählen, Prüfstand-kalibriert.)
   minAngSpeed: 0.3,     // rad/s; dito für Rotation (vorher hart 0.15)
   refHz: 60,
 };

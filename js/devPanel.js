@@ -120,7 +120,10 @@ export class DevPanel {
       { g: "Tracking (nur AR)", items: [
         { o: STAB, k: "minCutoff", l: "Glättung Ruhe (minCutoff)", min: 0.05, max: 5, step: 0.05 },
         { o: STAB, k: "beta", l: "Bewegungs-Öffnung (beta)", min: 0, max: 0.05, step: 0.0005 },
-        { o: STAB, k: "rotLerp", l: "Rotations-Glättung", min: 0.02, max: 1, step: 0.01 },
+        { o: STAB, k: "rotMinCutoff", l: "Rot-Glättung Ruhe (Hz)", min: 0.2, max: 8, step: 0.1 },
+        { o: STAB, k: "rotBeta", l: "Rot-Öffnung b. Drehung", min: 0, max: 15, step: 0.5 },
+        { o: STAB, k: "latencyMs", l: "Latenz-Ausgleich (ms)", min: 0, max: 120, step: 5 },
+        { o: STAB, k: "moveDwellMs", l: "Ruhe-Rückfall (ms)", min: 0, max: 1000, step: 50 },
         { o: STAB, k: "posDeadZone", l: "Pos-Dead-Zone (KB)", min: 0, max: 0.01, step: 0.0002 },
         { o: STAB, k: "snapDist", l: "Snap-Distanz (KB)", min: 0.05, max: 1, step: 0.01 },
         { o: STAB, k: "lostHoldMs", l: "Lost-Hold (ms)", min: 0, max: 1000, step: 50 },

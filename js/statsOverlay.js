@@ -93,6 +93,7 @@ export class StatsOverlay {
       `Track: ${this.stab.tracking ? "FOUND" : "LOST"}  sichtbar: ${this.stabRoot.visible ? "ja" : "nein"}\n` +
       `Gyro:  ${gy}\n` +
       `Jitter roh:  ${f(this.raw.rms())}\n` +
-      `Jitter stab: ${f(this.smooth.rms())}`;
+      `Jitter stab: ${f(this.smooth.rms())}\n` +
+      `Vision: ${this.stab.visionHz ?? "—"} Hz  ${this.stab.moving ? "BEWEGT" : "ruhig"}`;
   }
 }
