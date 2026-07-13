@@ -128,8 +128,13 @@ export const STAB = {
   extrapMaxMs: 150,     // max. so lange vorhersagen (dann halten)
   latencyMs: 40,        // Alter der Vision-Messung (Verarbeitungszeit) — wird
                         // im Bewegt-Modus zusätzlich vorhergesagt (weniger Nachlauf)
-  moveDwellMs: 250,     // so lange muss die Bewegung unter die HALBE Schwelle
-                        // fallen, bevor zurück in den Ruhe-Modus (Hysterese)
+  moveDwellMs: 250,     // so lange ohne Schwellen-Überschreitung, bevor zurück
+                        // in den Ruhe-Modus
+  // Ausreißer-/Überschwinger-Kappen (2026-07-13, gegen „Figur schräg/riesig"):
+  maxSpeed: 3,          // Kartenbreiten/s — schnellere Schätzung = Messfehler
+  maxAngSpeed: 4,       // rad/s — dito Rotation
+  extrapMaxDist: 0.08,  // Kartenbreiten — max. Vorhersage-Strecke pro Frame-Ziel
+  extrapMaxAngle: 0.25, // rad (~14°) — max. Vorhersage-Drehung
   minSpeed: 0.1,        // Kartenbreiten/s FENSTER-DRIFT; darunter gilt „steht".
                         // (2026-07-13: Bewegt-Erkennung läuft jetzt über geglättete
                         // 250-ms-Drift statt Momentan-Geschwindigkeit — tremor-fest;

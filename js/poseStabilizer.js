@@ -176,13 +176,11 @@ export class PoseStabilizer {
     // damit sind posDeadZone/beta einheitenfest, egal wie groß das Target ist.
     if (STAB.normalize !== "nein") _pos.divideScalar(_scale.x);
 
-    // FIX 2026-07-08 (#6): Ist die gemessene Pose WEIT weg vom geglätteten
-    // Zustand (Re-Found nach Drift/Brücke), sofort SNAPPEN statt zu gleiten.
-    if (STAB.snap !== "nein" && this.initialised &&
-        (this.smoothPos.distanceTo(_pos) > STAB.snapDist ||
-         this.smoothQuat.angleTo(_quat) > STAB.snapAngle)) {
-      this.initialised = false;
-    }
+    // Snap-Logik (#6) ist 2026-07-13 in updateMotionEstimate gewandert:
+    // sie wird nur noch auf NEUE Messungen angewandt und braucht ZWEI
+    // aufeinanderfolgende ferne Messungen (Ausreißer-Debounce) — eine einzelne
+    // Fehl-Messung unter Bewegungsunschärfe teleportierte sonst die Figur
+    // („mal schräg, mal doppelt so groß").
 
     if (!this.initialised) {
       this.xPrev.copy(_pos);
@@ -204,6 +202,7 @@ export class PoseStabilizer {
       this.snapNew.ok = false;
       this.driftSpeed = 0;
       this.driftAngSpeed = 0;
+      this.farCount = 0;
       this.initialised = true;
       this.write();
       return;
@@ -266,7 +265,24 @@ export class PoseStabilizer {
     this.hasRaw = true;
     if (!isNew) return; // stale Frame — MindAR hat nicht neu gemessen
     this.measCount++;
-    const dtMeas = Math.min(0.5, Math.max(0.005, (now - this.measT) / 1000));
+
+    // AUSREISSER-DEBOUNCE + Snap (#6, 2026-07-13): Messung weit weg vom
+    // Glättungszustand? EINE solche Messung ist meist ein Fehlgriff unter
+    // Bewegungsunschärfe → verwerfen (weder Geschwindigkeit noch Snap daraus).
+    // Erst die ZWEITE ferne Messung in Folge gilt als echt (Re-Found nach
+    // Drift) → Filter snappt neu auf.
+    const far = this.smoothPos.distanceTo(_pos) > STAB.snapDist ||
+                this.smoothQuat.angleTo(_quat) > STAB.snapAngle;
+    if (far) {
+      this.farCount = (this.farCount ?? 0) + 1;
+      if (this.farCount >= 2 && STAB.snap !== "nein") {
+        this.initialised = false; // nächster Tick setzt hart neu auf
+      }
+      return; // Ausreißer (oder Snap folgt) — Messung nicht in vel/meas übernehmen
+    }
+    this.farCount = 0;
+
+    const dtMeas = Math.min(0.5, Math.max(0.02, (now - this.measT) / 1000));
 
     // RAUSCH-SCHWELLE (Fix 2026-07-13): Verschiebungen unterhalb der Dead-Zone
     // sind Mess-Rauschen — daraus KEINE Geschwindigkeit schätzen, sondern die
@@ -278,6 +294,8 @@ export class PoseStabilizer {
       const vy = (_pos.y - this.measPos.y) / dtMeas;
       const vz = (_pos.z - this.measPos.z) / dtMeas;
       if (Number.isFinite(vx)) this.vel.lerp({ x: vx, y: vy, z: vz }, 0.5);
+      // Spike-Kappe: mehr als maxSpeed ist keine Hand mehr, sondern Messfehler
+      if (this.vel.length() > STAB.maxSpeed) this.vel.setLength(STAB.maxSpeed);
     } else {
       this.vel.multiplyScalar(0.5);
     }
@@ -290,6 +308,7 @@ export class PoseStabilizer {
     if (s > 1e-6 && angMeas > STAB.rotDeadZone) {
       _axis.set(_dq.x / s, _dq.y / s, _dq.z / s).multiplyScalar(angMeas / dtMeas);
       this.angVel.lerp(_axis, 0.5);
+      if (this.angVel.length() > STAB.maxAngSpeed) this.angVel.setLength(STAB.maxAngSpeed);
     } else {
       this.angVel.multiplyScalar(0.5);
     }
@@ -346,9 +365,15 @@ export class PoseStabilizer {
     if (STAB.extrapolate === "nein" || !moving) return moving;
     const tp = (Math.min(now - this.measT, STAB.extrapMaxMs) + STAB.latencyMs) / 1000;
     if (tp <= 0) return moving;
-    _pos.copy(this.measPos).addScaledVector(this.vel, tp);
-    const angV = this.angVel.length();
-    const ang = angV * tp;
+    // VORHERSAGE-KAPPEN (2026-07-13): Strecke und Winkel der Prediction hart
+    // begrenzen — ein Überschwinger Richtung Kamera wirkt sonst wie eine
+    // Größen-Explosion der Figur, ein Winkel-Überschwinger wie Schrägstand.
+    const dist = Math.min(this.vel.length() * tp, STAB.extrapMaxDist);
+    if (dist > 1e-7 && this.vel.lengthSq() > 0) {
+      _axis.copy(this.vel).normalize();
+      _pos.copy(this.measPos).addScaledVector(_axis, dist);
+    }
+    const ang = Math.min(this.angVel.length() * tp, STAB.extrapMaxAngle);
     if (ang > 1e-5) {
       _axis.copy(this.angVel).normalize();
       _predQ.setFromAxisAngle(_axis, ang);
