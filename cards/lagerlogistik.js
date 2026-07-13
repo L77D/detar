@@ -11,6 +11,12 @@ export const card = {
   jobUrl: "https://www.deinerstertag.de/ausschreibung/133024/penny_markt_gmbh/fachkraft_fuer_lagerlogistik/grossbeeren/",
   greeting: "Hey! Willst du wissen, was bei uns im Lager so abgeht?",
   idleReturnMs: 8000,
+  // Einblick-Galerie (Portal-Parallax): Bilder in Blätter-Reihenfolge.
+  gallery: [
+    "./assets/einblick/penny_lager.jpg",
+    "./assets/einblick/penny_team.webp",
+    "./assets/einblick/penny_lager_aerial.jpg",
+  ],
   questions: [
     { id: "alltag", label: "Was machst du eigentlich den ganzen Tag?",
       answer: "LKWs entladen, Ware checken, einlagern, Bestellungen für die Filialen zusammenstellen – bei uns steht's nie still.", pose: "affirm" },

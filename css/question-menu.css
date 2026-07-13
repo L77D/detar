@@ -58,6 +58,20 @@
   --q-title-radius:    4px;
   --q-title-gap:       -10px;   /* Abstand Titel -> Fragen-Karussell */
 
+  /* --- Tabs [Einblick] [Fragen stellen] (Stufe über den Modulen) ---------- */
+  --q-tab-font-size:   26px;   /* wie die alte Titelzeile */
+  --q-tab-gap:         8px;    /* Abstand zwischen den Tabs */
+  --q-tab-pad-y:       8px;
+  --q-tab-pad-x:       16px;
+  --q-tab-radius:      4px;
+  --q-tab-inactive-op: 0.55;   /* Deckkraft des inaktiven Tabs */
+
+  /* --- Einblick-Steuerung (◀ Zähler ▶) ------------------------------------ */
+  --q-arrow-size:      64px;   /* Kantenlänge der Pfeil-Buttons */
+  --q-arrow-font-size: 28px;
+  --q-arrow-gap:       22px;   /* Abstand Pfeil ↔ Zähler */
+  --q-num-font-size:   26px;   /* Bild-Zähler „1 / 3" */
+
   /* --- Onboarding (Instruktion vor dem ersten Scan) ---------------------- */
   --q-intro-font-size: 26px;   /* Schriftgröße der 3-Schritte-Zeilen */
   --q-intro-color:     #ffdd00; /* gelbe Schrift (wie Titel) */
@@ -180,6 +194,114 @@
   border-radius: var(--q-title-radius);
   user-select: none;
   white-space: nowrap;
+}
+
+/* ===========================================================================
+   TABS — [Einblick] [Fragen stellen], eine Stufe über den Modulen (2026-07-13).
+   Sitzen an der Stelle der alten Titelzeile („Wähle eine Frage" ist damit
+   ersetzt). Inaktiv = schwarzer Kasten / gelbe Schrift (Titel-Optik, leicht
+   gedimmt), aktiv = gelber Kasten / schwarze Schrift (Frage-Box-Optik).
+   =========================================================================== */
+.detar-tabs {
+  position: relative;
+  z-index: 1;          /* vor dem Muster (::before, z-index 0) */
+  align-self: flex-start;
+  display: flex;
+  gap: var(--q-tab-gap);
+  margin-left: var(--q-menu-pad-left);
+  margin-bottom: var(--q-title-gap);
+}
+
+.detar-tab {
+  font-family: var(--q-font);
+  font-size: var(--q-tab-font-size);
+  letter-spacing: var(--q-letter-spacing);
+  line-height: 1;
+  color: var(--q-title-color);
+  background: var(--q-title-bg);
+  border: none;
+  border-radius: var(--q-tab-radius);
+  padding: var(--q-tab-pad-y) var(--q-tab-pad-x);
+  opacity: var(--q-tab-inactive-op);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  pointer-events: auto;
+  transition: background 0.12s ease, color 0.12s ease, opacity 0.12s ease;
+}
+
+.detar-tab.active {
+  color: #111;
+  background: var(--q-bg);
+  opacity: 1;
+}
+
+/* Inhalt unter den Tabs (Karussell ODER Einblick-Steuerung) — nur ein
+   neutraler Wrapper, damit der Tab-Wechsel den Panel-Aufbau nicht anfasst. */
+.detar-tab-content {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===========================================================================
+   EINBLICK — Galerie-Steuerung: ◀  1 / 3  ▶ (Portal-Bildwechsel).
+   =========================================================================== */
+.detar-einblick {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: var(--q-arrow-gap);
+  padding-top: var(--q-hub-space);
+  padding-bottom: var(--q-hub-space);
+  pointer-events: auto;
+}
+
+/* Pfeil-Button in Frage-Box-Optik (gelb, Outline, harter Retro-Schatten). */
+.detar-arrow {
+  width: var(--q-arrow-size);
+  height: var(--q-arrow-size);
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-family: var(--q-font);
+  font-size: var(--q-arrow-font-size);
+  line-height: 1;
+  color: var(--q-text-color);
+
+  background: var(--q-bg);
+  border: var(--q-border-width) solid var(--q-outline);
+  border-radius: var(--q-radius);
+  box-shadow: 0 var(--q-shadow-depth) 0 var(--q-outline);
+  cursor: pointer;
+  user-select: none;
+  pointer-events: auto;
+  transition: transform var(--q-bounce-time) var(--q-bounce), box-shadow 0.12s ease;
+}
+
+.detar-arrow:active {
+  transform: translateY(4px);
+  box-shadow: 0 1px 0 var(--q-outline);
+}
+
+/* Bild-Zähler „1 / 3" — schwarzer Kasten, gelbe Schrift (Titel-Optik). */
+.detar-gallery-num {
+  font-family: var(--q-font);
+  font-size: var(--q-num-font-size);
+  letter-spacing: var(--q-letter-spacing);
+  line-height: 1;
+  color: var(--q-title-color);
+  background: var(--q-title-bg);
+  padding: var(--q-title-pad-y) var(--q-title-pad-x);
+  border-radius: var(--q-title-radius);
+  user-select: none;
+  white-space: nowrap;
+  min-width: 64px;
+  text-align: center;
 }
 
 .detar-menu {

@@ -31,6 +31,7 @@ import { ActivationAnim } from "./activationAnim.js";
 import { QuestionMenu } from "./questionMenu.js";
 import { CardController } from "./cardController.js";
 import { ActivationFX } from "./activationFX.js";
+import { PortalView, FigureFlip } from "./portalView.js";
 import { DebugOverlay } from "./debugOverlay.js";
 import { PoseStabilizer } from "./poseStabilizer.js";
 import { GyroFusion } from "./gyroFusion.js";
@@ -136,9 +137,16 @@ function buildExperience({ renderer, scene, camera, worldRoot, isRunning, preTic
   const wander = new IdleWander(nodes, frame);
   const activation = new ActivationAnim(nodes);
   const fx = new ActivationFX(worldRoot);
-  const menu = new QuestionMenu(el("question-root"), card.questions, (id) => controller.answerQuestion(id));
-  const controller = new CardController({ card, nodes, bubble, face: faceAnim, wander, activation, menu, fx });
-  window.__detar = { controller, fx, nodes, camera, renderer }; // Debug-Zugriff (Konsole)
+  // Einblick (Portal-Parallax + Figur-Flip) — nur wenn die Karte eine Galerie hat
+  const portal = new PortalView(worldRoot, frame, card.gallery ?? []);
+  const flip = new FigureFlip(nodes);
+  const menu = new QuestionMenu(el("question-root"), card.questions, (id) => controller.answerQuestion(id), {
+    galleryCount: card.gallery?.length ?? 0,
+    onTab: (tab) => controller.setTab(tab),
+    onNav: (dir) => portal.nav(dir),
+  });
+  const controller = new CardController({ card, nodes, bubble, face: faceAnim, wander, activation, menu, fx, portal, flip });
+  window.__detar = { controller, fx, portal, flip, nodes, camera, renderer }; // Debug-Zugriff (Konsole)
   const debug = DEBUG_MODE ? new DebugOverlay(worldRoot, nodes, frame) : null;
   if (debug) debug.setVisible(true);
 
@@ -189,6 +197,8 @@ function buildExperience({ renderer, scene, camera, worldRoot, isRunning, preTic
       if (_ray.intersectObject(fx.tapPlane, false).length > 0) controller.onCardTapped();
       return;
     }
+    // Einblick-Modus: Figur liegt/fliegt — kein Figur-Tap-Sprung
+    if (controller.einblick || flip.active) return;
     const hits = _ray.intersectObjects(figureMeshes.filter((m) => m.visible), false);
     if (hits.length > 0) startFigureJump();
   }
@@ -216,6 +226,8 @@ function buildExperience({ renderer, scene, camera, worldRoot, isRunning, preTic
     if (!isRunning || isRunning()) {
       wander.tick(dt);
       tickFigureJump(dt); // nach wander: überschreibt die Position während des Sprungs
+      flip.tick(dt);      // Einblick: Figur-Flip (nach wander, gleiche Regel)
+      portal.tick(dt);    // Einblick: Parallax + Edge-Lock + Fades
       activation.tick(dt);
       fx.tick(dt);
       faceAnim.tick(dt);

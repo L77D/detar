@@ -5,10 +5,10 @@
    Rückkopier-Schritt mehr. Zustand wird in localStorage gehalten (nur im
    Dev-Modus geladen), Presets speicherbar.
    ============================================================================= */
-import { TYPO, FACE, IDLE, ACT, CHOREO, SCENE, STAB, GYRO, ACTFX, syncCssVars } from "./config.js";
+import { TYPO, FACE, IDLE, ACT, CHOREO, SCENE, STAB, GYRO, ACTFX, PORTAL, syncCssVars } from "./config.js";
 import { applyNodAxis } from "./rig.js";
 
-const ALL = { TYPO, FACE, IDLE, ACT, CHOREO, SCENE, STAB, GYRO, ACTFX };
+const ALL = { TYPO, FACE, IDLE, ACT, CHOREO, SCENE, STAB, GYRO, ACTFX, PORTAL };
 const LS_KEY = "detar-dev-tuning-v1";
 const PRESET_KEY = "detar-dev-presets-v1";
 
@@ -94,6 +94,18 @@ export class DevPanel {
         { o: ACTFX, k: "glowColor", l: "Glow-Farbe", color: true },
         { o: ACTFX, k: "color1", l: "Partikel-Farbe 1", color: true, on: () => this.fx?.buildPool() },
         { o: ACTFX, k: "color2", l: "Partikel-Farbe 2", color: true, on: () => this.fx?.buildPool() },
+      ]},
+      { g: "Einblick (Portal)", items: [
+        { o: PORTAL, k: "depth", l: "Parallax-Tiefe", min: 0.01, max: 0.3, step: 0.005, on: () => window.__detar?.portal?.applyWindow() },
+        { o: PORTAL, k: "oversize", l: "Bild-Oversize", min: 1.1, max: 4, step: 0.05, on: () => window.__detar?.portal?.applyWindow() },
+        { o: PORTAL, k: "windowW", l: "Fenster Breite (Anteil)", min: 0.3, max: 1, step: 0.01, on: () => window.__detar?.portal?.applyWindow() },
+        { o: PORTAL, k: "windowH", l: "Fenster Höhe (Anteil)", min: 0.3, max: 1, step: 0.01, on: () => window.__detar?.portal?.applyWindow() },
+        { o: PORTAL, k: "damp", l: "Dämpfung (Trägheit)", min: 0.02, max: 1, step: 0.01 },
+        { o: PORTAL, k: "fadeSec", l: "Bildwechsel-Fade (s)", min: 0.05, max: 1.5, step: 0.05 },
+        { o: PORTAL, k: "showSec", l: "Ein-/Ausblenden (s)", min: 0.05, max: 1.5, step: 0.05 },
+        { o: PORTAL, k: "flipSec", l: "Figur-Flip Dauer (s)", min: 0.2, max: 2, step: 0.05 },
+        { o: PORTAL, k: "flipHeight", l: "Figur-Flip Höhe", min: 0, max: 0.2, step: 0.005 },
+        { o: PORTAL, k: "flatY", l: "Liegehöhe", min: 0.001, max: 0.02, step: 0.001 },
       ]},
       { g: "Tracking-Features an/aus (nur AR)", items: [
         { o: STAB, k: "enabled", l: "1 Glättung (PoseStabilizer)", options: ["ja", "nein"] },

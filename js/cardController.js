@@ -16,6 +16,9 @@ export class CardController {
     if (this.idleTimer !== null) { clearTimeout(this.idleTimer); this.idleTimer = null; }
     this.activation.cancel();
     this.fx?.stop();
+    this.einblick = false;
+    this.portal?.hideInstant();
+    this.flip?.reset();
     this.bubble.hide();
     this.face.setTalking(false);
     this.menu.reset();
@@ -27,7 +30,7 @@ export class CardController {
     window.setTimeout(() => this.onCardSeen(), 600);
   }
 
-  constructor({ card, nodes, bubble, face, wander, activation, menu, fx }) {
+  constructor({ card, nodes, bubble, face, wander, activation, menu, fx, portal, flip }) {
     this.data = card;
     this.nodes = nodes;
     this.bubble = bubble;
@@ -36,9 +39,43 @@ export class CardController {
     this.activation = activation;
     this.menu = menu;
     this.fx = fx ?? null;
+    this.portal = portal ?? null;
+    this.flip = flip ?? null;
+    this.einblick = false;  // Einblick-Tab aktiv (Portal sichtbar, Figur liegt)
     this.idleTimer = null;
     this.phase = "waiting"; // waiting → attract → intro → live
     this.setPose("idle");
+  }
+
+  /* Tab-Wechsel aus dem Bottom-Menü: [Einblick] | [Fragen stellen]. */
+  setTab(tab) {
+    if (tab === "einblick") this.enterEinblick();
+    else this.exitEinblick();
+  }
+  enterEinblick() {
+    if (this.einblick || this.phase !== "live" || !this.portal || !this.flip) return;
+    this.einblick = true;
+    if (this.idleTimer !== null) { clearTimeout(this.idleTimer); this.idleTimer = null; }
+    this.bubble.hide();
+    this.face.setTalking(false);
+    this.menu.clearSelection();
+    this.wander.setAttending(false);
+    this.wander.setBusy(true);   // bleibt busy, solange die Figur liegt
+    this.setPose("idle");
+    this.portal.show();          // Portal fadet ein, WÄHREND die Figur springt
+    this.flip.toFlat();
+  }
+  exitEinblick() {
+    if (!this.einblick) return;
+    this.einblick = false;
+    this.portal.hide();
+    this.flip.toUpright(() => {
+      // Heading des Wanderers mit der aufgerichteten Figur (rotation.y = 0)
+      // synchronisieren, sonst startet FACE_CAM von einem alten Winkel.
+      this.wander.heading = 0;
+      this.wander.yawSmooth = 0;
+      this.wander.setBusy(false);
+    });
   }
   /* Kompatibilität (trackingHint etc.): „schon mal gestartet?" */
   get greeted() { return this.phase !== "waiting"; }
@@ -78,7 +115,7 @@ export class CardController {
     });
   }
   answerQuestion(questionId) {
-    if (this.phase !== "live") return;
+    if (this.phase !== "live" || this.einblick) return;
     const q = this.data.questions.find((x) => x.id === questionId);
     if (!q) return;
     if (this.idleTimer !== null) {

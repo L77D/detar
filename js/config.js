@@ -145,6 +145,28 @@ export const ACTFX = {
   color2: "#ffffff",
 };
 
+// Einblick-Modus (PortalView + FigureFlip, js/portalView.js): Portal-Parallax-
+// Karte — übergroßes Bild HINTER der Karte, stencil-maskiert aufs Karten-
+// Fenster; Figur springt auf die Karte und legt sich plan hin.
+// EINHEITEN: Karten-Frame (Kartenbreite = SCENE.cardWidth = 0.17).
+export const PORTAL = {
+  depth: 0.06,       // Tiefen-Offset des Bilds unter der Karte (mehr = stärkere Parallaxe)
+  oversize: 2.0,     // Bildgröße relativ zum Fenster. MUSS mit depth wachsen:
+                     // Parallax-Faktor wird auf (oversize−1) geclampt — das ist
+                     // die harte „Leere nie sichtbar"-Garantie. 2.0 deckt
+                     // depth/camY bis 1.0 ab (Kamera bis 45° flach).
+  windowW: 0.9,      // Fenster-Breite als Anteil der Kartenbreite
+  windowH: 0.9,      // Fenster-Höhe als Anteil der Kartenhöhe
+  damp: 0.22,        // Offset-Dämpfung (fps-normalisierter Lerp) — glättet das
+                     // durch die Tiefe verstärkte Marker-Zittern
+  minCamY: 0.02,     // Kamera flacher als das → Offset einfrieren (degeneriert)
+  fadeSec: 0.35,     // Crossfade beim Galerie-Wechsel
+  showSec: 0.4,      // Ein-/Ausblenden des Portals beim Tab-Wechsel
+  flipSec: 0.7,      // Figur-Sprung + Hinlegen (Dauer)
+  flipHeight: 0.06,  // Bogenhöhe des Sprungs
+  flatY: 0.004,      // Liegehöhe der Figur über der Karte (über Glow/Portal)
+};
+
 // Gyro-Fusion: Handy-Gyroskop stützt die visuelle Pose (Prediction) und
 // überbrückt kurze Tracking-Aussetzer. Kill-Switch zusätzlich per ?nogyro.
 export const GYRO = {
@@ -154,7 +176,7 @@ export const GYRO = {
   deltaMax: 0.2,         // rad/Frame; größere Deltas = Sensor-Glitch → verwerfen
 };
 
-const ALL = { TYPO, FACE, IDLE, ACT, CHOREO, SCENE, STAB, GYRO, ACTFX };
+const ALL = { TYPO, FACE, IDLE, ACT, CHOREO, SCENE, STAB, GYRO, ACTFX, PORTAL };
 
 /* tuning.json (Preset-Export aus dem Lokal-Prototyp) laden und über die
    Defaults mergen. Fehlt die Datei, laufen die Defaults — kein Fehler. */
