@@ -45,9 +45,13 @@ const DESKTOP_MODE = params.has("desktop");
 const DEBUG_MODE = params.has("debug");
 const DEV_MODE = params.has("dev");           // Tuning-Panel (Regler)
 const TIMELINE_MODE = params.has("timeline"); // Theatre.js-Studio (Keyframe-Editor)
+const RECORD_MODE = params.has("record");     // Prüfstand: Session am Gerät aufzeichnen
+const REPLAY_MODE = params.has("replay");     // Prüfstand: Aufnahme statt Kamera abspielen
+const METRICS_MODE = REPLAY_MODE || params.has("metrics"); // Lauf zu Zahlen verdichten
 
 const el = (id) => document.getElementById(id);
 let gyro = null; // GyroFusion — wird in der START-Geste angelegt (iOS-Permission)
+let replay = null; // SessionReplay (?replay) — patcht getUserMedia auf die Aufnahmedatei
 
 /* --------------------------------------------------------------------------
    Splash befüllen + Start-Button freigeben, sobald Tuning + Font geladen sind.
@@ -62,6 +66,13 @@ async function boot() {
   if (DESKTOP_MODE) {
     const { PhoneFrame } = await import("./phoneFrame.js");
     phoneFrame = new PhoneFrame();
+  }
+
+  // Prüfstand-Replay: Datei-Auswahl in den Splash hängen; sobald ein Video
+  // gewählt ist, liefert getUserMedia dessen captureStream statt der Kamera.
+  if (REPLAY_MODE && !DESKTOP_MODE) {
+    const { SessionReplay } = await import("./sessionReplay.js");
+    replay = new SessionReplay();
   }
 
   el("cardName").textContent = card.profession;
@@ -343,12 +354,21 @@ async function startAR() {
         { getVideo: () => mindarThree.video, renderer }) // Kamera-Auflösung + PixelRatio anzeigen
     : null;
 
+  // Prüfstand-Metriken (?metrics, im ?replay automatisch): Lauf → Zahlen.
+  // Am Video-Ende eines Replays wird die Zusammenfassung automatisch gedumpt.
+  let metrics = null;
+  if (METRICS_MODE) {
+    const { MetricsCollector } = await import("./metricsCollector.js");
+    metrics = new MetricsCollector(anchor.group, stabRoot, stab);
+    if (replay) replay.onEnded = () => metrics.download();
+  }
+
   const exp = buildExperience({
     renderer, scene, camera, worldRoot,
     /* Behavior-Ticks nur, solange die Figur sichtbar ist — verhindert, dass
        Lost-Frames (NaN-Quelle) in die Zustands-Lerps einsickern. */
     isRunning: () => stabRoot.visible,
-    preTick: () => { stab.tick(); stats?.tick(); },
+    preTick: () => { stab.tick(); stats?.tick(); metrics?.tick(); },
   });
   const { controller, loop } = exp;
   await attachDevTools(exp);
@@ -373,6 +393,13 @@ async function startAR() {
     if (patchCam) navigator.mediaDevices.getUserMedia = gumOriginal; // Patch zurückbauen
   }
   console.log(`DETAR Kamera: ${mindarThree.video?.videoWidth}×${mindarThree.video?.videoHeight}, PixelRatio ${renderer.getPixelRatio()}`);
+
+  // Prüfstand-Aufnahme (?record): Kamerastream + Gyro-Events konservieren.
+  if (RECORD_MODE && mindarThree.video?.srcObject) {
+    const { SessionRecorder } = await import("./sessionRecorder.js");
+    new SessionRecorder(mindarThree.video.srcObject);
+  }
+
   renderer.setAnimationLoop(loop);
 }
 
