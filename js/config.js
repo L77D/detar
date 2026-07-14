@@ -107,7 +107,9 @@ export const STAB = {
                         // 2026-07-13: schnelleres Anspringen beim Scan)
 
   // (b) PoseStabilizer — Haupt-Glättung (Werte prüfstand-kalibriert 2026-07-08)
-  minCutoff: 1.0,       // Grund-Glättung in Ruhe. KLEINER = ruhiger, aber träger
+  minCutoff: 0.1,       // Grund-Glättung in Ruhe. KLEINER = ruhiger, aber träger.
+                        // 2026-07-14: 1.0 → 0.1 (deutlich ruhiger in Ruhe; beta=10
+                        // öffnet den Filter bei Bewegung, daher trotzdem reaktiv).
   beta: 10,             // wie stark Bewegung die Glättung löst. GRÖSSER = wacher.
                         // 2026-07-14 (Finding 3): 0.002 → 10. Der alte Wert öffnete
                         // den Filter faktisch NIE (1 KB/s ⇒ +0.002 Hz) — der Filter
@@ -116,7 +118,8 @@ export const STAB = {
                         // schnellen Schwenks). Jetzt: 0.5 KB/s ⇒ ~6 Hz (wach),
                         // Ruhe-Rauschen (~0.03 KB/s) ⇒ ~1.3 Hz (weiter ruhig).
   dCutoff: 1.0,         // Glättung der Geschwindigkeitsschätzung (selten anfassen)
-  rotMinCutoff: 1.5,    // Rotations-Glättung in Ruhe (Hz). KLEINER = ruhiger/träger
+  rotMinCutoff: 0.5,    // Rotations-Glättung in Ruhe (Hz). KLEINER = ruhiger/träger.
+                        // 2026-07-14: 1.5 → 0.5 (ruhiger; rotBeta öffnet bei Drehung).
   rotBeta: 4.0,         // wie stark Drehgeschwindigkeit die Glättung öffnet
                         // (adaptiv 2026-07-13 — ersetzt den fixen rotLerp)
   posDeadZone: 0.001,   // Kartenbreiten; darunter kein Update → Figur steht 100% still
