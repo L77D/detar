@@ -108,7 +108,13 @@ export const STAB = {
 
   // (b) PoseStabilizer — Haupt-Glättung (Werte prüfstand-kalibriert 2026-07-08)
   minCutoff: 1.0,       // Grund-Glättung in Ruhe. KLEINER = ruhiger, aber träger
-  beta: 0.002,          // wie stark Bewegung die Glättung löst. GRÖSSER = wacher
+  beta: 10,             // wie stark Bewegung die Glättung löst. GRÖSSER = wacher.
+                        // 2026-07-14 (Finding 3): 0.002 → 10. Der alte Wert öffnete
+                        // den Filter faktisch NIE (1 KB/s ⇒ +0.002 Hz) — der Filter
+                        // war ein fixer ~1-Hz-Tiefpass, Nachlauf ~160 ms, und die
+                        // Far-Debounce feuerte auf den eigenen Lag (Freeze→Pop bei
+                        // schnellen Schwenks). Jetzt: 0.5 KB/s ⇒ ~6 Hz (wach),
+                        // Ruhe-Rauschen (~0.03 KB/s) ⇒ ~1.3 Hz (weiter ruhig).
   dCutoff: 1.0,         // Glättung der Geschwindigkeitsschätzung (selten anfassen)
   rotMinCutoff: 1.5,    // Rotations-Glättung in Ruhe (Hz). KLEINER = ruhiger/träger
   rotBeta: 4.0,         // wie stark Drehgeschwindigkeit die Glättung öffnet
@@ -135,11 +141,17 @@ export const STAB = {
   maxAngSpeed: 4,       // rad/s — dito Rotation
   extrapMaxDist: 0.08,  // Kartenbreiten — max. Vorhersage-Strecke pro Frame-Ziel
   extrapMaxAngle: 0.25, // rad (~14°) — max. Vorhersage-Drehung
-  minSpeed: 0.1,        // Kartenbreiten/s FENSTER-DRIFT; darunter gilt „steht".
-                        // (2026-07-13: Bewegt-Erkennung läuft jetzt über geglättete
-                        // 250-ms-Drift statt Momentan-Geschwindigkeit — tremor-fest;
-                        // 0.1 = Bewegungen ab ~1,5 cm/s zählen, Prüfstand-kalibriert.)
-  minAngSpeed: 0.3,     // rad/s; dito für Rotation (vorher hart 0.15)
+  minSpeed: 0.04,       // Kartenbreiten/s FENSTER-DRIFT; darunter gilt „steht".
+                        // (Bewegt-Erkennung läuft über geglättete 250-ms-Drift statt
+                        // Momentan-Geschwindigkeit — tremor-fest.)
+                        // 2026-07-14 (Finding 3): 0.1 → 0.04. Sanftes Karten-Handling
+                        // (~0,6 cm/s+) zählt jetzt als BEWEGT → Extrapolation an,
+                        // Dead-Zones aus — vorher lief genau dieses Band als „ruhig"
+                        // durch den geschlossenen Filter (15–30-Hz-Treppensignal).
+  minAngSpeed: 0.09,    // rad/s; dito für Rotation.
+                        // 2026-07-14 (Finding 3): 0.3 (~17°/s!) → 0.09 (~5°/s) —
+                        // normales Kippen der Karte lag fast immer UNTER der alten
+                        // Schwelle und wurde als Ruhe behandelt.
   refHz: 60,
 };
 
@@ -187,11 +199,34 @@ export const PORTAL = {
 export const GYRO = {
   enabled: "ja",
   bridgeMs: 1200,        // wie lange ein Aussetzer gyro-geführt überbrückt wird
-  deltaDeadZone: 0.0012, // rad/Frame; kleinere Deltas = Sensor-Rauschen → ignorieren
-  deltaMax: 0.2,         // rad/Frame; größere Deltas = Sensor-Glitch → verwerfen
+  deltaDeadZone: 0.0012, // rad; AKKUMULATIONS-Schwelle (2026-07-14, Finding 4):
+                         // qPrev rückt in GyroFusion nur vor, wenn das Delta auch
+                         // ANGEWENDET wird — langsame Drehungen summieren sich auf
+                         // und feuern in ~0.07°-Quanten, statt Frame für Frame
+                         // verworfen zu werden (vorher trug die Prediction bei
+                         // Schwenks < ~4°/s NICHTS bei). Rauschen bleibt draußen.
+  deltaMax: 0.2,         // rad; größere Deltas = Sensor-Glitch → verwerfen (resync)
 };
 
-const ALL = { TYPO, FACE, IDLE, ACT, CHOREO, SCENE, STAB, GYRO, ACTFX, PORTAL };
+// Kamera-Anforderung (2026-07-14, Finding 1): MindAR fragt die Kamera OHNE
+// Auflösung an (video:{facingMode}) — Phones liefern dann meist 640×480, und
+// der Tracker arbeitet direkt auf dieser Auflösung (inputWidth = videoWidth).
+// Grobe Features = Pose-Rauschen; das ist der größte Roh-Signal-Hebel.
+// MindARThree hat KEINEN Auflösungs-Parameter → main.js wrappt getUserMedia
+// einmalig und schleust width/height als `ideal` ein (ideal kann nie zum
+// Constraint-Fehler führen; das Gerät liefert das nächstbeste Format).
+// A/B am Gerät: ?res=WxH übersteuert, ?res=0 schaltet den Patch ab.
+// Tatsächlich gelieferte Auflösung + Vision-Hz in ?stats prüfen — bricht die
+// Hz ein, 960x540 testen.
+export const CAM = {
+  width: 1280,
+  height: 720,
+  maxPixelRatio: 2,      // Renderer-Cap (Finding 2): MindAR setzt devicePixelRatio
+                         // (= 3 auf iPhones) — Cap auf 2 gibt dem tfjs-Tracker
+                         // GPU-Luft → höhere Vision-Hz, optisch kaum sichtbar.
+};
+
+const ALL = { TYPO, FACE, IDLE, ACT, CHOREO, SCENE, STAB, GYRO, ACTFX, PORTAL, CAM };
 
 /* tuning.json (Preset-Export aus dem Lokal-Prototyp) laden und über die
    Defaults mergen. Fehlt die Datei, laufen die Defaults — kein Fehler. */

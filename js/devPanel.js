@@ -119,7 +119,7 @@ export class DevPanel {
       ]},
       { g: "Tracking (nur AR)", items: [
         { o: STAB, k: "minCutoff", l: "Glättung Ruhe (minCutoff)", min: 0.05, max: 5, step: 0.05 },
-        { o: STAB, k: "beta", l: "Bewegungs-Öffnung (beta)", min: 0, max: 0.05, step: 0.0005 },
+        { o: STAB, k: "beta", l: "Bewegungs-Öffnung (beta)", min: 0, max: 30, step: 0.25 }, // 2026-07-14: Skala an beta=10 angepasst (vorher max 0.05)
         { o: STAB, k: "rotMinCutoff", l: "Rot-Glättung Ruhe (Hz)", min: 0.2, max: 8, step: 0.1 },
         { o: STAB, k: "rotBeta", l: "Rot-Öffnung b. Drehung", min: 0, max: 15, step: 0.5 },
         { o: STAB, k: "latencyMs", l: "Latenz-Ausgleich (ms)", min: 0, max: 120, step: 5 },
@@ -129,7 +129,7 @@ export class DevPanel {
         { o: STAB, k: "lostHoldMs", l: "Lost-Hold (ms)", min: 0, max: 1000, step: 50 },
         { o: STAB, k: "extrapMaxMs", l: "Extrapolation max (ms)", min: 0, max: 400, step: 10 },
         { o: STAB, k: "minSpeed", l: "Bewegt ab (KB/s)", min: 0, max: 0.3, step: 0.005 },
-        { o: STAB, k: "minAngSpeed", l: "Bewegt ab (rad/s)", min: 0, max: 1.5, step: 0.05 },
+        { o: STAB, k: "minAngSpeed", l: "Bewegt ab (rad/s)", min: 0, max: 1.5, step: 0.01 }, // 2026-07-14: Schrittweite verfeinert (Default 0.09)
         { o: GYRO, k: "bridgeMs", l: "Gyro-Brücke (ms)", min: 0, max: 3000, step: 100 },
         { o: GYRO, k: "deltaDeadZone", l: "Gyro-Dead-Band (rad)", min: 0, max: 0.01, step: 0.0002 },
       ]},

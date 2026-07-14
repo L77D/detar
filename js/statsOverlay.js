@@ -33,11 +33,12 @@ class Ring {
 }
 
 export class StatsOverlay {
-  constructor(anchorGroup, stabRoot, stab, gyro) {
+  constructor(anchorGroup, stabRoot, stab, gyro, env = null) {
     this.anchor = anchorGroup;
     this.stabRoot = stabRoot;
     this.stab = stab;
     this.gyro = gyro;
+    this.env = env; // { getVideo, renderer } — Kamera-Auflösung + PixelRatio (Finding 1/2)
     this.raw = new Ring();
     this.smooth = new Ring();
     this.lastDom = 0;
@@ -89,9 +90,13 @@ export class StatsOverlay {
       : !this.gyro ? "aus (?nogyro/Desktop)"
       : !this.gyro.enabled ? "keine Permission"
       : this.gyro.active ? "AKTIV" : "enabled, keine Events";
+    const v = this.env?.getVideo?.();
+    const cam = v && v.videoWidth ? `${v.videoWidth}×${v.videoHeight}` : "—";
+    const pr = this.env?.renderer ? this.env.renderer.getPixelRatio().toFixed(1) : "—";
     this.el.textContent =
       `Track: ${this.stab.tracking ? "FOUND" : "LOST"}  sichtbar: ${this.stabRoot.visible ? "ja" : "nein"}\n` +
       `Gyro:  ${gy}\n` +
+      `Cam:   ${cam}  PR: ${pr}\n` +
       `Jitter roh:  ${f(this.raw.rms())}\n` +
       `Jitter stab: ${f(this.smooth.rms())}\n` +
       `Vision: ${this.stab.visionHz ?? "—"} Hz  ${this.stab.moving ? "BEWEGT" : "ruhig"}`;

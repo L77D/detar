@@ -19,6 +19,7 @@
    liefert null, alles läuft wie ohne Gyro. Kill-Switch: ?nogyro.
    ============================================================================= */
 import * as THREE from "three";
+import { GYRO } from "./config.js";
 
 const DEG = Math.PI / 180;
 const _qNew = new THREE.Quaternion();
@@ -81,8 +82,19 @@ export class GyroFusion {
     this.active = true;
   }
 
-  /* Kamera-Rotations-Delta seit dem letzten Aufruf, im KAMERA-Frame.
-     null = kein (frisches) Gyro-Signal → Aufrufer arbeitet rein visuell. */
+  /* Kamera-Rotations-Delta seit dem letzten ANGEWENDETEN Delta, im KAMERA-Frame.
+     null = kein (frisches) Gyro-Signal ODER Delta (noch) unter der Schwelle →
+     Aufrufer arbeitet rein visuell.
+
+     AKKUMULATIONS-DEAD-BAND (2026-07-14, Finding 4): Das Dead-Band lebt jetzt
+     HIER statt in applyCameraDelta — und qPrev rückt nur vor, wenn das Delta
+     auch geliefert wird. Deltas unterhalb GYRO.deltaDeadZone summieren sich
+     dadurch auf (Referenz bleibt stehen) und feuern in ~0.07°-Quanten, sobald
+     die Schwelle überschritten ist. Vorher wurde jedes Einzeldelta < Schwelle
+     KOMPLETT verworfen → Schwenks langsamer als ~4°/s (bei 60 Hz Events)
+     bekamen NULL Prediction und liefen als reines Vision-Treppensignal.
+     Sensor-Rauschen um einen Ruhepunkt pendelt (Random Walk um 0) und bleibt
+     wie vorher praktisch immer unter der Schwelle. */
   getDelta() {
     if (!this.enabled || !this.active) return null;
     if (performance.now() - this.lastEventMs > 250) { this.hasPrev = false; return null; }
@@ -93,7 +105,10 @@ export class GyroFusion {
     }
     // Δ = qPrev⁻¹ ⊗ qCur (relative Drehung im Geräte-/Kamera-Frame)
     this.delta.copy(this.qPrev).invert().multiply(this.qCur);
-    this.qPrev.copy(this.qCur);
+    const ang = 2 * Math.acos(Math.min(1, Math.abs(this.delta.w)));
+    if (ang < GYRO.deltaDeadZone) return null;   // sammeln — qPrev bleibt stehen
+    this.qPrev.copy(this.qCur);                  // ab hier: Referenz vorrücken
+    if (ang > GYRO.deltaMax) return null;        // Sensor-Glitch: resync + verwerfen
     return this.delta;
   }
 

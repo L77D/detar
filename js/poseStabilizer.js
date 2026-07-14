@@ -386,13 +386,9 @@ export class PoseStabilizer {
      Frame entsprechend gegenrotieren: R' = dq⁻¹⊗R, p' = dq⁻¹·p. Wirkt auf
      den GEGLÄTTETEN Zustand + Filter-Historie (xPrev/dxPrev mitdrehen). */
   applyCameraDelta(dq) {
-    // FIX 2026-07-08 („dezentes Zittern"): Sensor-Rauschen dead-banden.
-    // deviceorientation zittert auf ruhigem Handy leicht (v. a. der Kompass-
-    // Anteil in alpha) — ungefiltert übernommen wird daraus Pose-Jitter.
-    // Winzige Deltas ignorieren (langsame Drehung korrigiert das Sehen ohnehin),
-    // absurde Deltas (Sensor-Glitch) verwerfen.
-    const ang = 2 * Math.acos(Math.min(1, Math.abs(dq.w)));
-    if (ang < GYRO.deltaDeadZone || ang > GYRO.deltaMax) return;
+    // Dead-Band + Glitch-Filter leben seit 2026-07-14 in GyroFusion.getDelta()
+    // (Akkumulations-Schwelle statt pro-Frame-Verwerfen, Finding 4) — hier
+    // kommt nur noch Anwendbares an.
     _dqInv.copy(dq).invert();
     this.smoothQuat.premultiply(_dqInv);
     this.smoothPos.applyQuaternion(_dqInv);

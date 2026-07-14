@@ -22,7 +22,7 @@
    ============================================================================= */
 import * as THREE from "three";
 import { card } from "../cards/lagerlogistik.js";
-import { TYPO, SCENE, STAB, CHOREO, loadTuning, syncCssVars } from "./config.js";
+import { TYPO, SCENE, STAB, CAM, CHOREO, loadTuning, syncCssVars } from "./config.js";
 import { buildRig } from "./rig.js";
 import { FaceAnimator } from "./faceAnimator.js";
 import { SpeechBubble } from "./speechBubble.js";
@@ -272,6 +272,32 @@ async function attachDevTools(exp) {
 async function startAR() {
   const { MindARThree } = await import("mindar-image-three");
   const container = el("ar-container");
+
+  // KAMERA-AUFLÖSUNG (2026-07-14, Finding 1): MindAR fordert die Kamera ohne
+  // width/height an → meist 640×480, und der Tracker arbeitet DIREKT auf
+  // dieser Auflösung (grobe Features = Pose-Rauschen). MindARThree bietet
+  // keinen Parameter dafür → getUserMedia EINMALIG wrappen und die Wunsch-
+  // Auflösung als `ideal` einschleusen (`ideal` kann nie zum Constraint-
+  // Fehler führen — das Gerät liefert das nächstbeste Format). Nach start()
+  // wird das Original wiederhergestellt. A/B am Gerät: ?res=960x540 …
+  // übersteuert CAM, ?res=0 schaltet den Patch ab. Gelieferte Auflösung
+  // und Vision-Hz in ?stats prüfen.
+  const resParam = params.get("res");
+  let camW = CAM.width, camH = CAM.height;
+  let patchCam = camW > 0 && resParam !== "0";
+  const resMatch = resParam ? resParam.match(/^(\d+)[x×](\d+)$/i) : null;
+  if (resMatch) { camW = +resMatch[1]; camH = +resMatch[2]; patchCam = true; }
+  const gumOriginal = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+  if (patchCam) {
+    navigator.mediaDevices.getUserMedia = (constraints) => {
+      if (constraints && constraints.video && typeof constraints.video === "object") {
+        constraints.video.width = { ideal: camW };
+        constraints.video.height = { ideal: camH };
+      }
+      return gumOriginal(constraints);
+    };
+  }
+
   const mindarThree = new MindARThree({
     container,
     imageTargetSrc: "./targets/card.mind",
@@ -282,6 +308,12 @@ async function startAR() {
     warmupTolerance: STAB.warmupTolerance,
   });
   const { renderer, scene, camera } = mindarThree;
+
+  // PIXEL-RATIO-CAP (2026-07-14, Finding 2): MindARThree setzt im Konstruktor
+  // devicePixelRatio (= 3 auf iPhones); resize() fasst die Ratio nicht an —
+  // einmal überschreiben genügt. Cap 2 gibt dem tfjs-Tracker GPU-Luft
+  // (Vision-Loop und Renderer teilen sich die GPU) → höhere Vision-Hz.
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, CAM.maxPixelRatio));
 
   // GOTCHA (gefunden 2026-07-09): mindar-image-three legt IMMER einen
   // CSS3DRenderer-Layer an — ein unbenanntes, vollflächiges <div> NACH dem
@@ -306,7 +338,10 @@ async function startAR() {
   stabRoot.add(worldRoot);
 
   // ?stats — Live-Diagnose am Gerät (Tracking/Gyro/Jitter in Zahlen)
-  const stats = params.has("stats") ? new StatsOverlay(anchor.group, stabRoot, stab, gyro) : null;
+  const stats = params.has("stats")
+    ? new StatsOverlay(anchor.group, stabRoot, stab, gyro,
+        { getVideo: () => mindarThree.video, renderer }) // Kamera-Auflösung + PixelRatio anzeigen
+    : null;
 
   const exp = buildExperience({
     renderer, scene, camera, worldRoot,
@@ -332,7 +367,12 @@ async function startAR() {
     }
   };
 
-  await mindarThree.start(); // fragt die Kamera-Berechtigung an (User-Geste!)
+  try {
+    await mindarThree.start(); // fragt die Kamera-Berechtigung an (User-Geste!)
+  } finally {
+    if (patchCam) navigator.mediaDevices.getUserMedia = gumOriginal; // Patch zurückbauen
+  }
+  console.log(`DETAR Kamera: ${mindarThree.video?.videoWidth}×${mindarThree.video?.videoHeight}, PixelRatio ${renderer.getPixelRatio()}`);
   renderer.setAnimationLoop(loop);
 }
 
