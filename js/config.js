@@ -100,7 +100,11 @@ export const STAB = {
   // 7 = GYRO.enabled · 8 = extrapolate (unten)
 
   // (a) MindAR-eingebauter Filter (Rohsignal, Defaults belassen)
-  filterMinCF: 0.001,
+  filterMinCF: 0.01,    // 2026-07-14: 0.001 → 0.01. Bei Karten-Bewegung hing die
+                        // intern gefilterte Pose zu weit hinter der Messung → MindARs
+                        // eigener Tracker suchte am falschen Ort und verwarf den Track
+                        // („verliert sich beim Verschieben"). Höheres CF = Pose folgt
+                        // schneller, Tracker bleibt dran.
   filterBeta: 1000,
   missTolerance: 5,     // Frames "Karte kurz verloren" aushalten
   warmupTolerance: 3,   // Frames bis "Karte gefunden" gemeldet wird (5→3
