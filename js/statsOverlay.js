@@ -8,6 +8,7 @@
    ============================================================================= */
 import * as THREE from "three";
 import { GYRO } from "./config.js";
+import { BUILD } from "./version.js";
 
 const _p = new THREE.Vector3();
 const _q = new THREE.Quaternion();
@@ -39,6 +40,16 @@ export class StatsOverlay {
     this.stab = stab;
     this.gyro = gyro;
     this.env = env; // { getVideo, renderer } — Kamera-Auflösung + PixelRatio (Finding 1/2)
+    // Versions-Check: version.js frisch vom Server holen (am Cache vorbei) und
+    // mit dem LAUFENDEN Build vergleichen → „hab ich den neuesten Stand?"
+    this.liveBuild = null;
+    fetch("./js/version.js", { cache: "no-store" })
+      .then((r) => (r.ok ? r.text() : null))
+      .then((t) => {
+        const m = t && t.match(/BUILD\s*=\s*(\d+)/);
+        if (m) this.liveBuild = +m[1];
+      })
+      .catch(() => {}); // offline/Fehler → nur die eigene Nummer anzeigen
     this.raw = new Ring();
     this.smooth = new Ring();
     this.lastDom = 0;
@@ -93,12 +104,16 @@ export class StatsOverlay {
     const v = this.env?.getVideo?.();
     const cam = v && v.videoWidth ? `${v.videoWidth}×${v.videoHeight}` : "—";
     const pr = this.env?.renderer ? this.env.renderer.getPixelRatio().toFixed(1) : "—";
+    const build = this.liveBuild == null ? `v${BUILD}`
+      : this.liveBuild === BUILD ? `v${BUILD} (aktuell)`
+      : `v${BUILD} — v${this.liveBuild} LIVE → neu laden!`;
     this.el.textContent =
       `Track: ${this.stab.tracking ? "FOUND" : "LOST"}  sichtbar: ${this.stabRoot.visible ? "ja" : "nein"}\n` +
       `Gyro:  ${gy}\n` +
       `Cam:   ${cam}  PR: ${pr}\n` +
       `Jitter roh:  ${f(this.raw.rms())}\n` +
       `Jitter stab: ${f(this.smooth.rms())}\n` +
-      `Vision: ${this.stab.visionHz ?? "—"} Hz  ${this.stab.moving ? "BEWEGT" : "ruhig"}`;
+      `Vision: ${this.stab.visionHz ?? "—"} Hz  ${this.stab.moving ? "BEWEGT" : "ruhig"}\n` +
+      `Build: ${build}`;
   }
 }
