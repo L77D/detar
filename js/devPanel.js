@@ -116,6 +116,7 @@ export class DevPanel {
         { o: STAB, k: "snap", l: "6 Re-Found-Snap", options: ["ja", "nein"] },
         { o: GYRO, k: "enabled", l: "7 Gyro-Fusion", options: ["ja", "nein"] },
         { o: STAB, k: "extrapolate", l: "8 Bewegungs-Extrapolation", options: ["ja", "nein"] },
+        { o: STAB, k: "scaleLock", l: "9 Scale-Lock (Anti-Verzerrung)", options: ["ja", "nein"] },
       ]},
       { g: "Tracking (nur AR)", items: [
         { o: STAB, k: "minCutoff", l: "Glättung Ruhe (minCutoff)", min: 0.05, max: 5, step: 0.05 },

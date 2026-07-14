@@ -53,6 +53,8 @@ export class PoseStabilizer {
     this.smoothPos = new THREE.Vector3();
     this.smoothQuat = new THREE.Quaternion();
     this.lastScale = new THREE.Vector3(1, 1, 1);
+    this.scaleLock = 1;        // eingefrorene Anchor-Scale (#9) — beim Aufsetzen gesetzt
+    this.hasScaleLock = false;
 
     // Tracking-Status (Lost-Hold)
     this.tracking = false;
@@ -170,6 +172,24 @@ export class PoseStabilizer {
       return; // kaputter Frame → komplett verwerfen, letzte gute Pose steht
     }
 
+    // SCALE-LOCK (#9, 2026-07-14): Die Anchor-Scale ist strukturell KONSTANT
+    // (postMatrix = Markerbreite in px; die ModelView-Transformation ist starr —
+    // Entfernung steckt in der Translation, nie in der Scale). Jede Abweichung
+    // ist also ein ARTEFAKT: MindARs elementweiser Matrix-Filter erzeugt nicht-
+    // starre Zwischenmatrizen (decompose → wackelnde Scale + schiefe Rotation),
+    // Fehl-Homographien unter Unschärfe erzeugen große Sprünge („Figur schräg/
+    // zu groß"). Vorher lief die Scale ROH durch UND normierte die Position —
+    // doppelte Jitter-Quelle. Jetzt: kleine Abweichung → mit eingefrorener
+    // Scale überschreiben (Rest der Pipeline unverändert); große Abweichung →
+    // ganzen Frame verwerfen, denn die Rotation DESSELBEN Frames ist ebenso
+    // unbrauchbar.
+    if (STAB.scaleLock !== "nein" && this.hasScaleLock) {
+      if (Math.abs(_scale.x - this.scaleLock) / this.scaleLock > STAB.scaleOutlier) {
+        return; // Fehl-Messung (schräg/riesig) → komplett verwerfen
+      }
+      _scale.setScalar(this.scaleLock);
+    }
+
     // EINHEITEN-NORMIERUNG (#2, Prüfstand-Befund 2026-07-08): MindARs Kamera-
     // Raum ist PIXEL-skaliert (Anchor-Scale ≈ Target-Pixelbreite, Position
     // z. B. z≈-4500). Gefiltert wird deshalb in KARTENBREITEN (pos / scale) —
@@ -188,6 +208,8 @@ export class PoseStabilizer {
       this.smoothPos.copy(_pos);
       this.smoothQuat.copy(_quat);
       this.lastScale.copy(_scale);
+      this.scaleLock = _scale.x; // Scale einfrieren (#9) — Aufsetz-Frame ist post-warmup
+      this.hasScaleLock = true;
       this.measPos.copy(_pos);
       this.measQuat.copy(_quat);
       this.measT = now;
@@ -220,7 +242,15 @@ export class PoseStabilizer {
     const moving = this.applyExtrapolation(now);
 
     // --- One-Euro auf die Position (pro Achse) --------------------------------
-    this.oneEuro(_pos, this.smoothPos, dt);
+    // beta-GATE (2026-07-14): Die Frame-Ableitung dxHat wird in Ruhe NIE ~0 —
+    // das 15–30-Hz-Treppensignal springt bei jeder neuen Messung über ein
+    // 16-ms-Render-dt (dxRaw-Spikes von 0.3+ KB/s), dCutoff hält dxHat auf
+    // Rausch-Niveau → beta·dxHat öffnete den Filter in Ruhe DAUERHAFT auf
+    // 1–2 Hz („wirkt, als gäbe es keinen Filter", egal wie klein minCutoff).
+    // Fix: Der beta-Term greift nur im BEWEGT-Modus — die Entscheidung trifft
+    // der tremor-feste 250-ms-Drift-Detektor, nicht die verrauschte Ableitung.
+    // Ruhe = purer minCutoff (hartes Glätten), Bewegung = adaptiv wie gehabt.
+    this.oneEuro(_pos, this.smoothPos, dt, moving);
 
     // Dead-Zone (#3): winzige Restbewegung verwerfen (nur im RUHE-Zustand)
     const dzOn = STAB.deadZones !== "nein";
@@ -402,13 +432,14 @@ export class PoseStabilizer {
     if (this.snapNew.ok) { this.snapNew.p.applyQuaternion(_dqInv); this.snapNew.q.premultiply(_dqInv); }
   }
 
-  oneEuro(targetV, out, dt) {
+  oneEuro(targetV, out, dt, open) {
     for (const a of ["x", "y", "z"]) {
       const dxRaw = (targetV[a] - this.xPrev[a]) / Math.max(dt, 1e-4);
       const aD = this.alpha(dt, STAB.dCutoff);
       const dxHat = this.dxPrev[a] + aD * (dxRaw - this.dxPrev[a]);
       this.dxPrev[a] = dxHat;
-      const cutoff = STAB.minCutoff + STAB.beta * Math.abs(dxHat);
+      // beta nur bei Bewegung (Drift-Detektor) — s. Kommentar am Aufrufer
+      const cutoff = open ? STAB.minCutoff + STAB.beta * Math.abs(dxHat) : STAB.minCutoff;
       const aPos = this.alpha(dt, cutoff);
       out[a] = this.xPrev[a] + aPos * (targetV[a] - this.xPrev[a]);
     }

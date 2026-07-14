@@ -97,6 +97,11 @@ export const STAB = {
   lostHold: "ja",    // 4 letzte Pose bei Verlust kurz halten (nein = sofort weg)
   nanGuard: "ja",    // 5 kaputte Posen verwerfen (nein = alter Verschwinde-Bug möglich!)
   snap: "ja",        // 6 Re-Found-Snap statt Hinübergleiten
+  scaleLock: "ja",   // 9 Anchor-Scale einfrieren + Scale-Ausreißer-Frames verwerfen
+                     //   (2026-07-14: Scale ist strukturell KONSTANT — Wackeln kommt
+                     //   aus MindARs elementweisem Matrix-Filter/Fehl-Homographien
+                     //   und erzeugte „Figur schräg/zu groß" + Positions-Jitter über
+                     //   die Normierung)
   // 7 = GYRO.enabled · 8 = extrapolate (unten)
 
   // (a) MindAR-eingebauter Filter (Rohsignal, Defaults belassen)
@@ -131,6 +136,8 @@ export const STAB = {
   lostHoldMs: 250,      // letzte gute Pose so lange halten, bevor ausgeblendet
   snapDist: 0.25,       // Kartenbreiten; Messung weiter weg → snappen statt gleiten
   snapAngle: 0.5,       // Radiant (~29°); dito Rotation
+  scaleOutlier: 0.1,    // relative Scale-Abweichung von der eingefrorenen Scale;
+                        // darüber gilt der GANZE Frame als Fehl-Messung → verwerfen
 
   // Bewegungs-Extrapolation (2026-07-09): MindAR misst nur mit ~15–30 Hz —
   // zwischen zwei Messungen wird die Pose mit der zuletzt gemessenen
@@ -226,8 +233,9 @@ export const GYRO = {
 // Tatsächlich gelieferte Auflösung + Vision-Hz in ?stats prüfen — bricht die
 // Hz ein, 960x540 testen.
 export const CAM = {
-  width: 1280,
-  height: 720,
+  width: 960,            // 2026-07-14: 1280→960 — am Gerät verifiziert: 720p drückte
+  height: 540,           // die Vision-Hz so weit, dass Tracking bei Karten-Bewegung
+                         // abriss; 960×540 hält Bewegung UND ist schärfer als 640×480.
   maxPixelRatio: 2,      // Renderer-Cap (Finding 2): MindAR setzt devicePixelRatio
                          // (= 3 auf iPhones) — Cap auf 2 gibt dem tfjs-Tracker
                          // GPU-Luft → höhere Vision-Hz, optisch kaum sichtbar.
