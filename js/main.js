@@ -143,7 +143,8 @@ function buildExperience({ renderer, scene, camera, worldRoot, isRunning, preTic
   const menu = new QuestionMenu(el("question-root"), card.questions, (id) => controller.answerQuestion(id), {
     galleryCount: card.gallery?.length ?? 0,
     onTab: (tab) => controller.setTab(tab),
-    onNav: (dir) => portal.nav(dir),
+    // über den Controller: wechselt Bild + spricht die Caption + synct Tabs
+    onNav: (dir) => controller.galleryNav(dir),
   });
   const controller = new CardController({ card, nodes, bubble, face: faceAnim, wander, activation, menu, fx, portal, flip });
   window.__detar = { controller, fx, portal, flip, nodes, camera, renderer }; // Debug-Zugriff (Konsole)
@@ -197,8 +198,15 @@ function buildExperience({ renderer, scene, camera, worldRoot, isRunning, preTic
       if (_ray.intersectObject(fx.tapPlane, false).length > 0) controller.onCardTapped();
       return;
     }
-    // Einblick-Modus: Figur liegt/fliegt — kein Figur-Tap-Sprung
-    if (controller.einblick || flip.active) return;
+    // Einblick-Modus: Tap auf einen Portal-Tab wechselt das Bild;
+    // Figur-Tap-Sprung bleibt aus.
+    if (controller.einblick || flip.active) {
+      if (controller.einblick && !flip.active && portal.tabs?.length) {
+        const hitsTab = _ray.intersectObjects(portal.tabs, false);
+        if (hitsTab.length > 0) controller.galleryTo(hitsTab[0].object.userData.tabIndex);
+      }
+      return;
+    }
     const hits = _ray.intersectObjects(figureMeshes.filter((m) => m.visible), false);
     if (hits.length > 0) startFigureJump();
   }

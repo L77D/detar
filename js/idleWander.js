@@ -55,6 +55,8 @@ export class IdleWander {
       this.pickNextState(true);
     }
   }
+  // (Einblick-Sway lebt seit 2026-07-15 in FigureFlip.tickSway — die Figur
+  //  liegt dort FLACH, das Wackeln ist eine rotation.z-Drehung der Fläche.)
   /* Replay-Reset (Dev-Panel): sauber zurück auf Anfang. */
   reset() {
     this.state = "bop"; this.stateTime = 0; this.clock = 0;

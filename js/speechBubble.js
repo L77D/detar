@@ -11,7 +11,7 @@
    werden über frame.getCamLocal() in diesen Frame transformiert.
    ============================================================================= */
 import * as THREE from "three";
-import { TYPO, CHOREO, frameLerp60 } from "./config.js";
+import { TYPO, CHOREO, PORTAL, SCENE, frameLerp60 } from "./config.js";
 
 const _v1 = new THREE.Vector3();
 const _v2 = new THREE.Vector3();
@@ -28,9 +28,19 @@ export class SpeechBubble {
     this.bubbleYaw = 0; this.bubbleYawInit = false;
     this.fullText = ""; this.wrappedLines = [];
     this.revealedChars = 0; this.lastTickMs = 0; this.typing = false; this.onDone = null;
+    this.flat = false; // Einblick: Bubble liegt FLACH auf der Kartenebene (kein Billboard)
     this.element = nodes.BubbleRoot;
+    this.basePos = this.element.position.clone(); // Original-Anker über dem Kopf
     this.element.visible = false;
     this.initCanvas();
+  }
+  /* Einblick-Modus: Caption parallel zur Karte statt Billboard, Position
+     WELT-verankert (Karten-Frame) statt über dem Kopf — rechts neben der
+     Figur, Unterkante über der Tab-Reihe (siehe faceCamera). */
+  setFlat(value) {
+    this.flat = value;
+    this.bubbleYawInit = false;
+    if (!value) this.element.position.copy(this.basePos);
   }
   initCanvas() {
     this.canvas = document.createElement("canvas");
@@ -53,7 +63,9 @@ export class SpeechBubble {
     this.planeH = h;
     this.plane.position.x = TYPO.offsetX;
     this.plane.position.y = h / 2 + TYPO.offsetY;
-    this.plane.renderOrder = 3;
+    // 20: über ALLEM inkl. Einblick-Portal (Bild 10/11, Rahmen 15) — die
+    // Caption muss auch dort lesbar bleiben, wo sie das Fenster überlappt.
+    this.plane.renderOrder = 20;
     this.element.add(this.plane);
   }
   /* Nach Font-Load oder Tuning-Änderung neu aufbauen (measureText braucht den echten Font). */
@@ -108,9 +120,12 @@ export class SpeechBubble {
     const yTop = canvas.height - pad - this.wrappedLines.length * lineH;
     // HORIZONTAL ZENTRIERT über die finale Breite (breiteste Zeile des
     // fertig gewrappten Texts); Zeilen im Block bleiben linksbündig.
+    // FLAT-Modus (Einblick-Caption): LINKS-verankert — der Textanfang sitzt
+    // fest am captionDX-Anker rechts neben der Figur, unabhängig von
+    // Zeilenlänge und captionScale.
     let blockW = 0;
     for (const l of this.wrappedLines) blockW = Math.max(blockW, ctx.measureText(l).width);
-    const xLeft = (canvas.width - blockW) / 2;
+    const xLeft = this.flat ? pad : (canvas.width - blockW) / 2;
     const visLines = [];
     let charsLeft = visibleText.length;
     for (let i = 0; i < this.wrappedLines.length; i++) {
@@ -169,6 +184,43 @@ export class SpeechBubble {
   }
   faceCamera(dt) {
     const obj = this.element;
+    // FLACH-Modus (Einblick): Welt-Ausrichtung = Kartenebene (Normale = Karten-
+    // hoch, Text-Oben zur Karten-Oberkante) — exakt wie die flache Figur.
+    // Gleiche Quaternion-Rechnung wie unten, nur mit Rx(−90°) statt Yaw.
+    if (this.flat) {
+      // matrixWorld ist im Loop einen Frame alt — vor dem Lesen aktualisieren
+      this.frame.worldRoot.updateWorldMatrix(true, false);
+      obj.parent.updateWorldMatrix(true, false);
+      _q1.setFromEuler(_euler.set(-Math.PI / 2, 0, 0));
+      this.frame.worldRoot.getWorldQuaternion(_q3).multiply(_q1);
+      obj.parent.getWorldQuaternion(_q2).invert();
+      obj.quaternion.copy(_q2.multiply(_q3));
+      // Position: Karten-Frame-Anker rechts neben der Figur; Unterkante des
+      // Canvas sitzt captionGap über der Tab-Oberkante. BubbleRoot ist Kind
+      // der (schwankenden) Figur → Welt-Ziel jede Frame in deren lokalen Raum
+      // umrechnen — Caption steht still, egal was die Figur macht.
+      const cardH = SCENE.cardWidth * SCENE.cardAspect;
+      const winW = SCENE.cardWidth * PORTAL.windowW;
+      const winH = cardH * PORTAL.windowH;
+      const zEdge = cardH * PORTAL.windowOffsetZ - winH / 2; // Fenster-Oberkante
+      const tabTop = zEdge - PORTAL.tabH * cardH;            // Oberkante aktiver Tab
+      const worldScale = this.element.scale.x * (obj.parent?.scale.x ?? 1);
+      const planeHCard = this.planeH * worldScale;
+      // captionDX = Abstand der TEXT-LINKEN Kante von der Figuren-Mitte.
+      // Text startet im Canvas bei pad (links-verankert, s. renderCanvas) —
+      // Plane-Mitte = Anker − padWelt + halbe Plane-Breite.
+      const padCard = (TYPO.paddingPx + TYPO.strokeWidth) * TYPO.unitsPerPx * worldScale;
+      const planeWCard = this.canvas.width * TYPO.unitsPerPx * worldScale;
+      _v1.set(
+        winW * (PORTAL.peekX + PORTAL.captionDX) - padCard + planeWCard / 2,
+        0.002,
+        tabTop - PORTAL.captionGap * winH - planeHCard / 2
+      );
+      this.frame.worldRoot.localToWorld(_v1);
+      obj.parent.worldToLocal(_v1);
+      obj.position.copy(_v1);
+      return;
+    }
     // Kamera + Bubble in den KARTEN-Frame transformieren (MindAR-Anpassung)
     const camL = this.frame.getCamLocal(_v1);
     if (!camL) return; // NaN-Schutz: kaputter Frame → Ausrichtung halten
@@ -198,8 +250,14 @@ export class SpeechBubble {
   }
   tick(dt) {
     if (this.plane) {
-      this.plane.position.x = TYPO.offsetX;
-      this.plane.position.y = this.planeH / 2 + TYPO.offsetY;
+      if (this.flat) {
+        // Flach: Anker rechnet in faceCamera direkt auf BubbleRoot — Plane
+        // ohne Kopf-Offsets, zentriert auf dem Anker.
+        this.plane.position.set(0, 0, 0);
+      } else {
+        this.plane.position.x = TYPO.offsetX;
+        this.plane.position.y = this.planeH / 2 + TYPO.offsetY;
+      }
     }
     this.faceCamera(dt);
     this.tickTypewriter();

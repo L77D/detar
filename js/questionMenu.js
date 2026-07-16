@@ -152,6 +152,11 @@ export class QuestionMenu {
     if (typeof idx === "number") this.galleryIndex = idx;
     this.updateGalleryNum();
   }
+  /* Sync von außen (Tap auf einen Portal-Tab in der 3D-Szene). */
+  setGalleryIndex(idx) {
+    this.galleryIndex = idx;
+    this.updateGalleryNum();
+  }
   updateGalleryNum() {
     if (this.galleryNum)
       this.galleryNum.textContent = `${this.galleryIndex + 1} / ${this.galleryCount}`;

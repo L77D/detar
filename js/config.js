@@ -194,8 +194,11 @@ export const PORTAL = {
                      // Parallax-Faktor wird auf (oversize−1) geclampt — das ist
                      // die harte „Leere nie sichtbar"-Garantie. 2.0 deckt
                      // depth/camY bis 1.0 ab (Kamera bis 45° flach).
-  windowW: 0.9,      // Fenster-Breite als Anteil der Kartenbreite
-  windowH: 0.9,      // Fenster-Höhe als Anteil der Kartenhöhe
+  windowW: 1.05,     // Fenster-Breite als Anteil der Kartenbreite (Mockup: etwas breiter als die Karte)
+  windowH: 0.75,     // Fenster-Höhe als Anteil der Kartenhöhe (untere Karten-Sektion bleibt frei)
+  windowOffsetZ: -0.125, // Fenster-Mitte in Karten-Z (Anteil Kartenhöhe; − = Richtung
+                     // Oberkante). −0.125 + H 0.75 ⇒ Fenster-Oberkante = Karten-Oberkante,
+                     // unten bleiben 25% Karte (Zitat-Box) sichtbar — wie im Mockup.
   damp: 0.22,        // Offset-Dämpfung (fps-normalisierter Lerp) — glättet das
                      // durch die Tiefe verstärkte Marker-Zittern
   minCamY: 0.02,     // Kamera flacher als das → Offset einfrieren (degeneriert)
@@ -203,9 +206,63 @@ export const PORTAL = {
   showSec: 0.4,      // Ein-/Ausblenden des Portals beim Tab-Wechsel
   flipSec: 0.7,      // Figur-Sprung zur Portal-Oberkante (Dauer)
   flipHeight: 0.06,  // Bogenhöhe des Sprungs
-  figureScale: 0.33, // Figur-Größe im Einblick (Faktor; Figur stellt sich
-                     // verkleinert an die OBERKANTE des Portal-Fensters —
-                     // geändert 2026-07-13, vorher: flach hinlegen/flatY)
+  figureScale: 0.5,  // Figur-Größe im Einblick (Faktor; 0.33→0.5 am 2026-07-15
+                     // auf Michaels Wunsch: „1,5× größer")
+
+  // --- Design-Runde 2 (2026-07-15, Mockup einblick_02) -----------------------
+  // Pixel-Punkt-Rahmen: zwei Ring-Ebenen auf ZWISCHENTIEFEN zwischen Karte
+  // und Bild — die Parallaxe entsteht rein aus der Perspektive (statische
+  // Ebenen, stencil-maskiert). Außen = flach, innen = tiefer.
+  dotDepth1: 0.33,   // Tiefe Ring 1 (außen), Anteil von depth
+  dotDepth2: 0.66,   // Tiefe Ring 2 (innen), Anteil von depth
+  // Die beiden Ringe liegen ENG beieinander und sind um (inset2−inset1)
+  // phasenverschoben → die Punkte erscheinen als diagonale PAARE (Mockup).
+  dotInset1: 0.02,   // Rand-Abstand Ring 1 (Anteil Fensterbreite)
+  dotInset2: 0.042,  // Rand-Abstand Ring 2 (Paar-Versatz = inset2 − inset1)
+  dotSize: 0.014,    // Punkt-Kantenlänge (Anteil Fensterbreite)
+  dotGap: 0.13,      // Punkt-Abstand (Anteil Fensterbreite)
+  dotColor: "#ffdd00",
+  // Schwarzer Rahmen mit runden Ecken um das Fenster (Mockup) — liegt ÜBER
+  // Bild/Ringen/Tabs (deckt die Tab-Unterkanten ab), aber UNTER der Figur.
+  frameW: 0.03,      // Outline-Dicke (Anteil Fensterbreite)
+  frameRadius: 0.05, // Eck-Radius (Anteil Fensterbreite)
+  frameColor: "#000000",
+  // Tabs an der Portal-OBERKANTE (eine Farbfläche pro Galeriebild, antappbar;
+  // aktiv = neon + HÖHER, inaktiv = oliv + flacher; Wechsel fährt animiert
+  // hoch/runter). Keine Lücke — die schwarzen Outlines bilden die Trennlinien.
+  tabH: 0.105,       // AKTIVE Tab-Höhe (Anteil Kartenhöhe; ×1.5 am 2026-07-15)
+  tabHInactive: 0.0825, // inaktive Tab-Höhe (muss > 2×frameW-Outline bleiben,
+                     // sonst bleibt von der Farbfläche nichts übrig)
+  tabRaiseLerp: 0.2, // Hoch-/Runterfahren beim Wechsel (fps-normalisierter Lerp)
+  tabGap: 0,         // Lücke zwischen Tabs (Mockup: 0 — Outlines stoßen aneinander)
+  tabInset: 0.07,    // Einzug der Tab-Reihe von beiden Fensterkanten (Anteil Fensterbreite)
+  tabActive: "#eaff00",
+  tabInactive: "#8a8a1e",
+  // Figur lugt HINTER dem Fenster über die Kante (Mockup): die Portal-Ebenen
+  // rendern ÜBER den Figur-Layern (siehe Render-Reihenfolge in portalView.js),
+  // die Figur steht leicht IM Fenster → ihr unterer Teil wird vom Fenster
+  // verdeckt, nur der Teil über der Kante ist sichtbar.
+  peekX: -0.42,      // X-Position (Anteil Fensterbreite; − = links, Mockup: linke Rahmenecke)
+  peekZ: 0.03,       // wie tief die Figur IM Fenster liegt (Anteil Fensterhöhe;
+                     // mehr = mehr von ihr verdeckt; bei 0 ist ~die obere
+                     // Hälfte sichtbar — Figur-Mitte liegt auf der Kante)
+  peekTilt: 10,      // Grunddrehung der flachen Figur in der Ebene (Grad, + = links);
+                     // der Sway wackelt um diesen Winkel herum
+  // Caption-Anker (flach, Karten-Frame): rechts neben der Figur, UNTERKANTE
+  // fest über der Tab-Reihe — der Text-Canvas ist bottom-anchored, dadurch
+  // wächst auch 5-zeiliger Text nach OBEN und berührt die Tabs nie.
+  captionDX: 0.21,   // Abstand der TEXT-LINKEN Kante von der Figuren-Mitte
+                     // (Anteil Fensterbreite; Text ist im Flat-Modus links-verankert —
+                     // Textanfang sitzt fix, egal wie lang die Zeile ist)
+  captionGap: 0.03,  // Abstand Caption-Unterkante ↔ Tab-Oberkante (Anteil Fensterhöhe)
+  captionScale: 0.75, // Bubble-Weltgröße im Einblick (1 = wie die normale Bubble;
+                     // BubbleRoot wird gegen figureScale gegenskaliert, sonst
+                     // schrumpft der Text mit der Figur). 0.5 = Mockup-Maß,
+                     // ×1.5 auf 0.75 am 2026-07-15 (Michael).
+  // Lebendigkeits-Sway im Einblick: ±swayDeg Drehung in unregelmäßigen Abständen
+  swayDeg: 1.5,      // max. Auslenkung (Grad)
+  swayMin: 1.2,      // Pause zwischen Richtungswechseln min (s)
+  swayMax: 3.2,      // dito max (s)
 };
 
 // Gyro-Fusion: Handy-Gyroskop stützt die visuelle Pose (Prediction) und
