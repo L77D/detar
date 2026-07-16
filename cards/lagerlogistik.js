@@ -12,10 +12,15 @@ export const card = {
   greeting: "Hey! Willst du wissen, was bei uns im Lager so abgeht?",
   idleReturnMs: 8000,
   // Einblick-Galerie (Portal-Parallax): Bilder in Blätter-Reihenfolge.
+  // caption = gesprochener Text der Figur zu diesem Bild (Bubble-Typewriter,
+  // max ~5 Zeilen) — aller gesprochene Content einer Karte lebt in DIESER Datei.
   gallery: [
-    "./assets/einblick/penny_lager.jpg",
-    "./assets/einblick/penny_team.webp",
-    "./assets/einblick/penny_lager_aerial.jpg",
+    { url: "./assets/einblick/penny_lager.jpg",
+      caption: "Das ist unser Lager. Hier kommen täglich tonnenweise Produkte an – und jede Palette geht durch unsere Hände." },
+    { url: "./assets/einblick/penny_team.webp",
+      caption: "Mein Team! Ohne die läuft hier gar nichts. Kurz absprechen, anpacken – fertig ist die Palette." },
+    { url: "./assets/einblick/penny_lager_aerial.jpg",
+      caption: "Von oben sieht man erst, wie riesig das Ganze ist. Und wir kennen hier jeden Winkel." },
   ],
   questions: [
     { id: "alltag", label: "Was machst du eigentlich den ganzen Tag?",

@@ -20,6 +20,7 @@ export class CardController {
     this.portal?.hideInstant();
     this.flip?.reset();
     this.bubble.hide();
+    this.bubble.setFlat?.(false);
     this.face.setTalking(false);
     this.menu.reset();
     this.setPose("idle");
@@ -60,14 +61,25 @@ export class CardController {
     this.face.setTalking(false);
     this.menu.clearSelection();
     this.wander.setAttending(false);
-    this.wander.setBusy(true);   // bleibt busy, solange die Figur liegt
+    this.wander.setBusy(true);   // bleibt busy, solange die Figur FLACH liegt
     this.setPose("idle");
     this.portal.show();          // Portal fadet ein, WÄHREND die Figur springt
-    this.flip.toFlat();
+    this.flip.toFlat(() => {
+      // Gelandet: Figur liegt FLACH auf der Karte (Mockup) — IdleWander bleibt
+      // busy (kein FACE_CAM/Watscheln im Liegen), Lebendigkeit kommt vom
+      // In-Plane-Sway (FigureFlip.tickSway); Blinzeln/Mund laufen weiter.
+      this.bubble.setFlat(true); // Caption parallel zur Karte
+      this.speakCaption();
+    });
   }
   exitEinblick() {
     if (!this.einblick) return;
     this.einblick = false;
+    this.bubble.hide();
+    this.bubble.setFlat(false);
+    this.face.setTalking(false);
+    this.wander.setAttending(false);
+    this.wander.setBusy(true);   // während des Rückflugs
     this.portal.hide();
     this.flip.toUpright(() => {
       // Heading des Wanderers mit der aufgerichteten Figur (rotation.y = 0)
@@ -76,6 +88,31 @@ export class CardController {
       this.wander.yawSmooth = 0;
       this.wander.setBusy(false);
     });
+  }
+  /* Caption des aktiven Galeriebilds sprechen (Bubble-Typewriter + Mund-Sync).
+     Läuft bereits eine Caption, bricht setText sie ab und startet die neue.
+     Caption bleibt stehen bis Bildwechsel/Exit (kein Idle-Return im Einblick). */
+  speakCaption() {
+    const cap = this.portal?.captionAt(this.portal.index);
+    if (!cap) return;
+    this.face.setTalking(true);
+    this.bubble.setText(cap, () => this.face.setTalking(false));
+  }
+  /* Galerie blättern (Bottom-UI ◀ ▶). Liefert den neuen Index (Menü-Zähler). */
+  galleryNav(dir) {
+    if (!this.einblick || !this.portal) return this.portal?.index ?? 0;
+    const idx = this.portal.nav(dir);
+    this.menu.setGalleryIndex(idx);
+    this.speakCaption();
+    return idx;
+  }
+  /* Direkt zu Bild i (Tap auf einen Portal-Tab, Raycast in main.js). */
+  galleryTo(i) {
+    if (!this.einblick || !this.portal || this.flip.active) return;
+    if (i === this.portal.index) return;
+    const idx = this.portal.goTo(i);
+    this.menu.setGalleryIndex(idx);
+    this.speakCaption();
   }
   /* Kompatibilität (trackingHint etc.): „schon mal gestartet?" */
   get greeted() { return this.phase !== "waiting"; }
