@@ -5,6 +5,8 @@
    Fragen-Karussell (CSS-Scroll-Snap, Tilt, Selected-State) oder die
    Einblick-Steuerung (◀ Zähler ▶ für die Portal-Galerie).
    ============================================================================= */
+import { sound } from "./sound.js";
+
 export class QuestionMenu {
   /* hooks: { onTab(tab), onNav(dir) → neuer Index, galleryCount } */
   constructor(rootEl, questions, onTap, hooks = {}) {
@@ -162,6 +164,7 @@ export class QuestionMenu {
       this.galleryNum.textContent = `${this.galleryIndex + 1} / ${this.galleryCount}`;
   }
   onQuestionTap(questionId, btn) {
+    sound.questionTap();
     this.root.querySelectorAll(".detar-q-btn.selected").forEach((el) => el.classList.remove("selected"));
     btn.classList.add("selected");
     this.onTap(questionId);

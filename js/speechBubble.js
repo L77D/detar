@@ -12,6 +12,7 @@
    ============================================================================= */
 import * as THREE from "three";
 import { TYPO, CHOREO, PORTAL, SCENE, frameLerp60 } from "./config.js";
+import { sound } from "./sound.js";
 
 const _v1 = new THREE.Vector3();
 const _v2 = new THREE.Vector3();
@@ -175,7 +176,15 @@ export class SpeechBubble {
     if (elapsed < TYPO.msPerChar) return;
     const steps = Math.floor(elapsed / TYPO.msPerChar);
     this.lastTickMs = now;
+    const prevChars = this.revealedChars;
     this.revealedChars = Math.min(this.fullText.length, this.revealedChars + steps);
+    // Stimme: frisch enthüllte Zeichen sprechen (Animalese) bzw. ticken —
+    // Fortschritt + Frage-Endung steuern die Satz-Melodie.
+    sound.speak(
+      this.fullText.slice(prevChars, this.revealedChars),
+      this.revealedChars / this.fullText.length,
+      this.fullText.trimEnd().endsWith("?")
+    );
     this.renderCanvas(this.fullText.slice(0, this.revealedChars));
     if (this.revealedChars >= this.fullText.length) {
       this.typing = false;

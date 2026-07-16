@@ -265,6 +265,26 @@ export const PORTAL = {
   swayMax: 3.2,      // dito max (s)
 };
 
+// Sound-Design (js/sound.js → tiks, js/vendor/tiks.js): prozedurale UI-Sounds,
+// reine Web-Audio-Synthese — keine Audio-Dateien, kein Netzwerk. Das Theme
+// färbt ALLE Sounds gemeinsam ("arcade" = 8-bit/Chiptune, passt zum Pixel-Look).
+export const SOUND = {
+  enabled: "ja",
+  theme: "arcade",   // "soft" | "crisp" | "arcade" | "glass"
+  volume: 0.3,       // 0–1 (tiks-Default 0.3 — dezent), Master für UI + Stimme
+  // Bubble-Text-Vertonung: "silben" = Animalese-Stimme (js/voice.js),
+  // "ticks" = alte abstrakte Blips, "aus" = stumm tippen.
+  speech: "silben",
+  typeTicks: "ja",   // nur für speech="ticks": Ticks an/aus (Altverhalten)
+  typeTickMs: 70,    // min. Abstand zwischen zwei Ticks (ms) — Dichte des Ratterns
+  // Stimme (VoiceSynth) — Charakter „aufgeweckt, aber selbstsicher":
+  speechPitch: 300,    // Grund-Stimmlage (Hz). Höher = heller/jünger
+  speechTempoMs: 75,   // min. Abstand zwischen Silben (ms). Kleiner = plappriger
+  speechLively: 2.5,   // Tonhöhen-Lebhaftigkeit (± Halbtöne). 0 = monoton
+  speechLen: 90,       // Silben-Länge (ms). Länger = gedehnter, singender
+  speechVolume: 0.6,   // Stimm-Pegel relativ zum Master (volume × speechVolume)
+};
+
 // Gyro-Fusion: Handy-Gyroskop stützt die visuelle Pose (Prediction) und
 // überbrückt kurze Tracking-Aussetzer. Kill-Switch zusätzlich per ?nogyro.
 export const GYRO = {
@@ -298,7 +318,7 @@ export const CAM = {
                          // GPU-Luft → höhere Vision-Hz, optisch kaum sichtbar.
 };
 
-const ALL = { TYPO, FACE, IDLE, ACT, CHOREO, SCENE, STAB, GYRO, ACTFX, PORTAL, CAM };
+const ALL = { TYPO, FACE, IDLE, ACT, CHOREO, SCENE, STAB, GYRO, ACTFX, PORTAL, CAM, SOUND };
 
 /* tuning.json (Preset-Export aus dem Lokal-Prototyp) laden und über die
    Defaults mergen. Fehlt die Datei, laufen die Defaults — kein Fehler. */
