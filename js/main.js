@@ -37,6 +37,7 @@ import { PoseStabilizer } from "./poseStabilizer.js";
 import { GyroFusion } from "./gyroFusion.js";
 import { StatsOverlay } from "./statsOverlay.js";
 import { GYRO } from "./config.js";
+import { sound } from "./sound.js";
 
 const params = new URLSearchParams(location.search);
 const DESKTOP_MODE = params.has("desktop");
@@ -75,6 +76,10 @@ async function boot() {
   btn.disabled = false;
   btn.addEventListener("click", async () => {
     btn.disabled = true; // Spinner während Kamera/Tracking hochfahren
+    // Sound MUSS in der User-Geste initialisiert werden (AudioContext-Unlock,
+    // gleiche Regel wie die Gyro-Permission) — VOR allen awaits.
+    sound.init();
+    sound.uiTap();
     // Gyro-Permission MUSS direkt in der User-Geste angefragt werden (iOS) —
     // deshalb hier, VOR allen awaits. Fail-safe: ohne Gyro läuft alles normal.
     if (!DESKTOP_MODE && GYRO.enabled !== "nein" && !params.has("nogyro")) {
@@ -147,7 +152,7 @@ function buildExperience({ renderer, scene, camera, worldRoot, isRunning, preTic
     onNav: (dir) => controller.galleryNav(dir),
   });
   const controller = new CardController({ card, nodes, bubble, face: faceAnim, wander, activation, menu, fx, portal, flip });
-  window.__detar = { controller, fx, portal, flip, nodes, camera, renderer }; // Debug-Zugriff (Konsole)
+  window.__detar = { controller, fx, portal, flip, nodes, camera, renderer, sound }; // Debug-Zugriff (Konsole)
   const debug = DEBUG_MODE ? new DebugOverlay(worldRoot, nodes, frame) : null;
   if (debug) debug.setVisible(true);
 
@@ -156,6 +161,7 @@ function buildExperience({ renderer, scene, camera, worldRoot, isRunning, preTic
   function startFigureJump() {
     if (figureJump.active) return;
     figureJump.active = true;
+    sound.figureJump();
     figureJump.t = 0;
     figureJump.fromX = nodes.FigureRoot.position.x;
     figureJump.fromZ = nodes.FigureRoot.position.z;

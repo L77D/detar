@@ -5,10 +5,11 @@
    Rückkopier-Schritt mehr. Zustand wird in localStorage gehalten (nur im
    Dev-Modus geladen), Presets speicherbar.
    ============================================================================= */
-import { TYPO, FACE, IDLE, ACT, CHOREO, SCENE, STAB, GYRO, ACTFX, PORTAL, syncCssVars } from "./config.js";
+import { TYPO, FACE, IDLE, ACT, CHOREO, SCENE, STAB, GYRO, ACTFX, PORTAL, SOUND, syncCssVars } from "./config.js";
 import { applyNodAxis } from "./rig.js";
+import { sound } from "./sound.js";
 
-const ALL = { TYPO, FACE, IDLE, ACT, CHOREO, SCENE, STAB, GYRO, ACTFX, PORTAL };
+const ALL = { TYPO, FACE, IDLE, ACT, CHOREO, SCENE, STAB, GYRO, ACTFX, PORTAL, SOUND };
 const LS_KEY = "detar-dev-tuning-v1";
 const PRESET_KEY = "detar-dev-presets-v1";
 
@@ -133,6 +134,19 @@ export class DevPanel {
         { o: PORTAL, k: "captionGap", l: "Caption: Abstand ü. Tabs", min: 0, max: 0.2, step: 0.005 },
         { o: PORTAL, k: "tabActive", l: "Tab aktiv", color: true, on: () => window.__detar?.portal?.applyWindow() },
         { o: PORTAL, k: "tabInactive", l: "Tab inaktiv", color: true, on: () => window.__detar?.portal?.applyWindow() },
+      ]},
+      { g: "Sound", items: [
+        { o: SOUND, k: "enabled", l: "Sound an/aus", options: ["ja", "nein"] },
+        { o: SOUND, k: "theme", l: "Klang-Theme", options: ["soft", "crisp", "arcade", "glass"], on: () => { sound.applyTheme(); sound.uiReveal(); } },
+        { o: SOUND, k: "volume", l: "Lautstärke", min: 0, max: 1, step: 0.05, on: () => { sound.applyVolume(); sound.questionTap(); } },
+        { o: SOUND, k: "speech", l: "Bubble-Stimme", options: ["silben", "ticks", "aus"], on: () => sound.probeSpeech() },
+        { o: SOUND, k: "speechPitch", l: "Stimmlage (Hz)", min: 120, max: 600, step: 5, on: () => sound.probeSpeech() },
+        { o: SOUND, k: "speechTempoMs", l: "Silben-Abstand (ms)", min: 40, max: 220, step: 5, on: () => sound.probeSpeech() },
+        { o: SOUND, k: "speechLively", l: "Lebhaftigkeit (±HT)", min: 0, max: 8, step: 0.25, on: () => sound.probeSpeech() },
+        { o: SOUND, k: "speechLen", l: "Silben-Länge (ms)", min: 40, max: 220, step: 5, on: () => sound.probeSpeech() },
+        { o: SOUND, k: "speechVolume", l: "Stimm-Pegel", min: 0, max: 1.5, step: 0.05, on: () => { sound.applyVolume(); sound.probeSpeech(); } },
+        { o: SOUND, k: "typeTicks", l: "Ticks (Modus 'ticks')", options: ["ja", "nein"] },
+        { o: SOUND, k: "typeTickMs", l: "Tick-Abstand (ms)", min: 30, max: 250, step: 5 },
       ]},
       { g: "Tracking-Features an/aus (nur AR)", items: [
         { o: STAB, k: "enabled", l: "1 Glättung (PoseStabilizer)", options: ["ja", "nein"] },
@@ -316,6 +330,8 @@ export class DevPanel {
     this.bubble.rebuild();
     syncCssVars();
     applyNodAxis(this.nodes);
+    sound.applyTheme();  // deckt localStorage-Load, Preset-Load, Import, Reset ab
+    sound.applyVolume();
   }
   saveLocal() { localStorage.setItem(LS_KEY, JSON.stringify(snapshot())); }
   loadLocal() {

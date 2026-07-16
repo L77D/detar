@@ -9,6 +9,7 @@
    Phasen: waiting → attract → intro → live
    ============================================================================= */
 import { CHOREO } from "./config.js";
+import { sound } from "./sound.js";
 
 export class CardController {
   /* Replay (Dev-Panel): kompletter Reset + erneuter „Scan". */
@@ -56,6 +57,7 @@ export class CardController {
   enterEinblick() {
     if (this.einblick || this.phase !== "live" || !this.portal || !this.flip) return;
     this.einblick = true;
+    sound.tab(true);
     if (this.idleTimer !== null) { clearTimeout(this.idleTimer); this.idleTimer = null; }
     this.bubble.hide();
     this.face.setTalking(false);
@@ -75,6 +77,7 @@ export class CardController {
   exitEinblick() {
     if (!this.einblick) return;
     this.einblick = false;
+    sound.tab(false);
     this.bubble.hide();
     this.bubble.setFlat(false);
     this.face.setTalking(false);
@@ -101,6 +104,7 @@ export class CardController {
   /* Galerie blättern (Bottom-UI ◀ ▶). Liefert den neuen Index (Menü-Zähler). */
   galleryNav(dir) {
     if (!this.einblick || !this.portal) return this.portal?.index ?? 0;
+    sound.gallery();
     const idx = this.portal.nav(dir);
     this.menu.setGalleryIndex(idx);
     this.speakCaption();
@@ -110,6 +114,7 @@ export class CardController {
   galleryTo(i) {
     if (!this.einblick || !this.portal || this.flip.active) return;
     if (i === this.portal.index) return;
+    sound.gallery();
     const idx = this.portal.goTo(i);
     this.menu.setGalleryIndex(idx);
     this.speakCaption();
@@ -124,11 +129,13 @@ export class CardController {
     this.activation.prime(); // Figur SOFORT verstecken (kein Aufblitzen)
     if (this.fx && CHOREO.requireTap !== "nein") {
       this.phase = "attract";
+      sound.cardFound(); // Ping: „da ist was auf der Karte"
       this.fx.play();
       this.menu.showAttract(); // „Tipp auf die Karte!"
     } else {
       this.phase = "intro";
       this.menu.hideOnboarding();
+      sound.popIn();
       this.activation.play(() => this.startGreeting());
     }
   }
@@ -137,8 +144,12 @@ export class CardController {
     if (this.phase !== "attract") return;
     this.phase = "intro";
     this.menu.hideOnboarding();
+    sound.cardTapped(); // Swoosh in den Burst hinein
     // Burst-Blitz zu Ende → dann Pop-In der Figur
-    this.fx.burst(() => this.activation.play(() => this.startGreeting()));
+    this.fx.burst(() => {
+      sound.popIn();
+      this.activation.play(() => this.startGreeting());
+    });
   }
   startGreeting() {
     this.phase = "live";
@@ -147,6 +158,7 @@ export class CardController {
     this.setPose(CHOREO.greetingPose);
     this.bubble.setText(this.data.greeting, () => {
       this.face.setTalking(false);
+      sound.uiReveal(); // Chime synchron zur Menü-Einfahrt
       this.menu.revealUI(); // Begrüßung fertig getippt → JETZT fährt das Menü ein
       this.scheduleIdleReturn();
     });
