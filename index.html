@@ -19,53 +19,123 @@
   </script>
 </head>
 <body>
+  <!-- Pixel-Halo-Filter (UI-Update 2026-09-03): Textkasten mit ausgefransten
+       Kanten = Alpha der Schrift um r px dilatiert und in Kastenfarbe gefüllt,
+       Original obendrauf. Zuordnung Klasse → Filter in css/app.css (.px-*). -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <filter id="px-000000-8" x="-30%" y="-90%" width="160%" height="280%" color-interpolation-filters="sRGB">
+      <feMorphology in="SourceAlpha" operator="dilate" radius="8" result="d"/>
+      <feFlood flood-color="#000000" result="c"/>
+      <feComposite in="c" in2="d" operator="in" result="box"/>
+      <feMerge><feMergeNode in="box"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="px-3d3d3d-8" x="-30%" y="-90%" width="160%" height="280%" color-interpolation-filters="sRGB">
+      <feMorphology in="SourceAlpha" operator="dilate" radius="8" result="d"/>
+      <feFlood flood-color="#3d3d3d" result="c"/>
+      <feComposite in="c" in2="d" operator="in" result="box"/>
+      <feMerge><feMergeNode in="box"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="px-193d18-8" x="-30%" y="-90%" width="160%" height="280%" color-interpolation-filters="sRGB">
+      <feMorphology in="SourceAlpha" operator="dilate" radius="8" result="d"/>
+      <feFlood flood-color="#193d18" result="c"/>
+      <feComposite in="c" in2="d" operator="in" result="box"/>
+      <feMerge><feMergeNode in="box"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="px-0b95d0-5" x="-30%" y="-90%" width="160%" height="280%" color-interpolation-filters="sRGB">
+      <feMorphology in="SourceAlpha" operator="dilate" radius="5" result="d"/>
+      <feFlood flood-color="#0b95d0" result="c"/>
+      <feComposite in="c" in2="d" operator="in" result="box"/>
+      <feMerge><feMergeNode in="box"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="px-71ff51-5" x="-30%" y="-90%" width="160%" height="280%" color-interpolation-filters="sRGB">
+      <feMorphology in="SourceAlpha" operator="dilate" radius="5" result="d"/>
+      <feFlood flood-color="#71ff51" result="c"/>
+      <feComposite in="c" in2="d" operator="in" result="box"/>
+      <feMerge><feMergeNode in="box"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="px-23b6f5-5" x="-30%" y="-90%" width="160%" height="280%" color-interpolation-filters="sRGB">
+      <feMorphology in="SourceAlpha" operator="dilate" radius="5" result="d"/>
+      <feFlood flood-color="#23b6f5" result="c"/>
+      <feComposite in="c" in2="d" operator="in" result="box"/>
+      <feMerge><feMergeNode in="box"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="px-b5b5b5-5" x="-30%" y="-90%" width="160%" height="280%" color-interpolation-filters="sRGB">
+      <feMorphology in="SourceAlpha" operator="dilate" radius="5" result="d"/>
+      <feFlood flood-color="#b5b5b5" result="c"/>
+      <feComposite in="c" in2="d" operator="in" result="box"/>
+      <feMerge><feMergeNode in="box"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="px-eeeeee-5" x="-30%" y="-90%" width="160%" height="280%" color-interpolation-filters="sRGB">
+      <feMorphology in="SourceAlpha" operator="dilate" radius="5" result="d"/>
+      <feFlood flood-color="#eeeeee" result="c"/>
+      <feComposite in="c" in2="d" operator="in" result="box"/>
+      <feMerge><feMergeNode in="box"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="px-171717-10" x="-30%" y="-90%" width="160%" height="280%" color-interpolation-filters="sRGB">
+      <feMorphology in="SourceAlpha" operator="dilate" radius="10" result="d"/>
+      <feFlood flood-color="#171717" result="c"/>
+      <feComposite in="c" in2="d" operator="in" result="box"/>
+      <feMerge><feMergeNode in="box"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="px-3aa1cd-4" x="-30%" y="-90%" width="160%" height="280%" color-interpolation-filters="sRGB">
+      <feMorphology in="SourceAlpha" operator="dilate" radius="4" result="d"/>
+      <feFlood flood-color="#3aa1cd" result="c"/>
+      <feComposite in="c" in2="d" operator="in" result="box"/>
+      <feMerge><feMergeNode in="box"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </svg>
+
   <!-- AR-Vollbild: MindAR hängt hier Kamera-Video + WebGL-Canvas rein -->
   <div id="ar-container"></div>
 
-  <!-- DET-Label oben links (klickbar → Stellenanzeige, neuer Tab); href wird
-       aus den Karten-Daten gesetzt -->
-  <a id="detLogo" href="#" target="_blank" rel="noopener noreferrer">
-    <img src="./assets/logos/det-logo-white.svg" alt="DEIN ERSTER TAG" />
-  </a>
+  <!-- Suchrahmen: vier weiße Screen-Ecken, bis die Karte gefunden ist -->
+  <div id="scanFrame" aria-hidden="true">
+    <img class="c-tl" src="./assets/ui/corner-weiss.svg" alt="" />
+    <img class="c-tr" src="./assets/ui/corner-weiss.svg" alt="" />
+    <img class="c-br" src="./assets/ui/corner-weiss.svg" alt="" />
+    <img class="c-bl" src="./assets/ui/corner-weiss.svg" alt="" />
+  </div>
 
-  <!-- Hinweis, wenn die Karte nach dem ersten Scan wieder verloren geht -->
-  <div id="trackingHint"></div>
+  <!-- Hinweis, wenn die Karte nach dem ersten Scan wieder verloren geht
+       (Support-Zeile mit Icon, befüllt aus js/supportUI.js) -->
+  <div id="lostHint"></div>
 
-  <!-- Bottom-UI: Onboarding-Instruktion, später das Dialog-Menü (Themen → Fragen) -->
+  <!-- Bottom-UI: Support-Zeilen (Suche / gefunden), später das Dialog-Menü -->
   <div id="question-root"></div>
 
   <!-- Splash (liegt über allem, verschwindet mit body.launched) -->
-  <div class="splash" id="splash">
-    <div class="det-logo">
-      <img src="./assets/logos/det-logo-white.svg" alt="Dein Erster Tag" />
+  <div class="splash d-dots" id="splash">
+    <div class="splash-band">
+      <div class="splash-logo">
+        <img src="./assets/logos/det-logo-jobsar.svg" alt="Dein Erster Tag" />
+        <span class="splash-jobsar px-jobsar">Jobs.AR</span>
+      </div>
     </div>
 
     <div class="splash-center">
       <p class="splash-kicker">Du scannst</p>
-      <h1 class="card-name" id="cardName">…</h1>
-      <div class="company">
-        <span class="company-label">bei</span>
-        <div class="company-logo-box">
-          <!-- Logo aus der Karte (card.companyLogo) oder Firmenname als Text -->
-          <img id="companyLogo" src="" alt="" />
-          <span id="companyText" class="company-text"></span>
-        </div>
+      <h1 class="card-name px-title" id="cardName">…</h1>
+      <p class="splash-kicker">bei</p>
+      <div class="company-box">
+        <!-- Logo aus der Karte (card.companyLogo) oder Firmenname als Text -->
+        <img id="companyLogo" src="" alt="" />
+        <span id="companyText" class="company-text"></span>
       </div>
     </div>
 
     <div class="splash-cta">
       <div id="errorBox"></div>
-      <button id="launchButton" disabled>Start</button>
+      <button id="launchButton" disabled><span class="px-title">Scan starten</span></button>
     </div>
 
     <!-- Kameraerlaubnis fehlt oder wurde abgelehnt: eigener Bildschirm ohne
          Kamerabild (body.camera-denied), Dialogsystem 2026-09-03 -->
     <div class="perm-screen" id="permScreen">
-      <p class="perm-title">Ohne Kamera geht's nicht</p>
+      <p class="perm-title px-title">Ohne Kamera geht's nicht</p>
       <p class="perm-text">Die Figur steht nur auf der Karte, wenn die Kamera sie sehen darf.
         Erlaube der Seite in den Browser-Einstellungen den Kamerazugriff und lade sie dann neu.</p>
       <p class="perm-text perm-text--small">Das Kamerabild bleibt auf deinem Handy — es wird weder übertragen noch gespeichert.</p>
-      <button id="permReload">Neu laden</button>
+      <button id="permReload"><span class="px-title">Neu laden</span></button>
     </div>
   </div>
 

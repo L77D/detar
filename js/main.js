@@ -37,6 +37,7 @@ import { GyroFusion } from "./gyroFusion.js";
 import { StatsOverlay } from "./statsOverlay.js";
 import { GYRO } from "./config.js";
 import { sound } from "./sound.js";
+import { buildSupport } from "./supportUI.js";
 
 const params = new URLSearchParams(location.search);
 const DESKTOP_MODE = params.has("desktop");
@@ -69,11 +70,12 @@ async function boot() {
   const logoImg = el("companyLogo"), companyText = el("companyText");
   if (card.companyLogo) { logoImg.src = card.companyLogo; logoImg.alt = card.company; companyText.hidden = true; }
   else { logoImg.hidden = true; companyText.textContent = card.company ?? ""; }
-  const logoLink = el("detLogo");
-  logoLink.href = card.jobUrl;
+  // (DET-Logo mit Job-Link nach dem Splash: seit dem UI-Update 2026-09-03 raus)
 
   // Font muss VOR dem ersten Bubble-measureText geladen sein.
-  try { await document.fonts.load(`52px "Jersey 10"`); } catch (e) { /* Fallback mono */ }
+  try {
+    await Promise.all([document.fonts.load(`52px "Jersey 10"`), document.fonts.load(`26px "Silkscreen"`)]);
+  } catch (e) { /* Fallback mono */ }
 
   const btn = el("launchButton");
   btn.disabled = false;
@@ -93,6 +95,7 @@ async function boot() {
       if (DESKTOP_MODE) await startDesktop();
       else await startAR();
       document.body.classList.add("launched");
+      document.body.classList.add("scanning"); // Suchrahmen (weiße Ecken) bis zur ersten Erkennung
     } catch (err) {
       console.error("DETAR start failed:", err);
       showStartError(err);
@@ -381,9 +384,15 @@ async function startAR() {
   const { controller, loop } = exp;
   await attachDevTools(exp);
 
-  const hint = el("trackingHint");
+  // Karte verloren: Support-Zeile mit Icon mittig im Bild (mock 05), das Menü
+  // bleibt stehen und friert nach CHOREO.trackingLostMs ein.
+  const hint = el("lostHint");
+  const lost = buildSupport("gefunden", [{ text: "Halte auf die Karte" }]);
+  lost.icon.stop();
+  hint.appendChild(lost);
   anchor.onTargetFound = () => {
-    hint.style.display = "none";
+    document.body.classList.remove("scanning");
+    if (hint.classList.contains("show")) { hint.classList.remove("show"); lost.icon.stop(); }
     stab.onFound();
     controller.onCardSeen(); // greeted-Flag: Choreographie nur beim ersten Mal
     controller.onTrackingFound(); // Menü wieder freigeben
@@ -391,8 +400,8 @@ async function startAR() {
   anchor.onTargetLost = () => {
     stab.onLost();
     if (controller.greeted) {
-      hint.textContent = "Karte wieder ins Bild nehmen";
-      hint.style.display = "block";
+      hint.classList.add("show");
+      lost.icon.setMode("suchen");
       controller.onTrackingLost(); // nach CHOREO.trackingLostMs friert das Menü ein
     }
   };
@@ -470,7 +479,7 @@ async function startDesktop() {
   });
 
   // "Scan" simulieren wie im Lokal-Prototyp
-  setTimeout(() => controller.onCardSeen(), 1200);
+  setTimeout(() => { document.body.classList.remove("scanning"); controller.onCardSeen(); }, 1200);
 }
 
 boot();

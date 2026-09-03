@@ -1,7 +1,10 @@
 /* =============================================================================
-   DETAR — App-Grundgerüst: Font, Vollbild-AR-Container, Splash-Screen,
-   DET-Logo-Overlay, Tracking-Hinweis. Design spiegelt question-menu.css
-   (gelb / schwarz / Jersey 10 / Punktraster).
+   DETAR — App-Grundgerüst: Fonts, Farb-Tokens, Vollbild-AR-Container, Splash,
+   Suchrahmen (Screen-Ecken), Karte-verloren-Hinweis, Support-Zeilen mit
+   Handy-Icon. UI-UPDATE 2026-09-03 nach Figma „DETAR" (Seite UI, Komponenten
+   support/frage): Blau/Gelb/Schwarz, Jersey 10 als Hauptschrift, Silkscreen
+   für die Support-Zeilen, gelbes Punktraster, Textkästen als Pixel-Halo
+   (SVG-Filter feMorphology, Definitionen in index.html).
    ============================================================================= */
 
 @font-face {
@@ -9,18 +12,45 @@
   src: url("../assets/fonts/Jersey10-Regular.ttf") format("truetype");
   font-display: block;
 }
+/* Silkscreen (OFL) — Ersatz für FS Pixel Sans Unicode aus dem Mockup
+   (kommerzielle Lizenz). Entscheidung Michael 2026-09-03. Silkscreen läuft
+   rund 1,6× breiter als FS Pixel Sans, deshalb sind die Support-Größen unten
+   auf die Kastenbreiten des Mockups zurückgerechnet (48 → 22 px, 36 → 20 px). */
+@font-face {
+  font-family: "Silkscreen";
+  src: url("../assets/fonts/Silkscreen-Regular.ttf") format("truetype");
+  font-display: block;
+}
 
 :root {
-  --s-font:          "Jersey 10", monospace;
-  --s-yellow:        #ffdd00;
-  --s-outline:       #111;
-  --s-bg:            #3a3b34;
-  --s-text-light:    #ffffff;
-  --s-border-width:  4px;
-  --s-radius:        14px;
-  --s-shadow-depth:  6px;
-  --s-dot-color:     rgba(0, 0, 0, 1);
-  --s-dot-gap:       22px;
+  /* --- Schrift --------------------------------------------------------------- */
+  --d-font:            "Jersey 10", monospace;
+  --d-font-support:    "Silkscreen", "Jersey 10", monospace;
+  --d-support-lg:      22px;   /* Hinweise „Halte auf die Karte", „Karte gefunden" (26 lief bei 390 px über den Rand) */
+  --d-support-md:      20px;   /* Kopfzeile „Was interessiert dich?", Thementitel */
+  --d-support-splash:  30px;   /* „Du scannst" / „bei" */
+
+  /* --- Farben (Figma, gemessen 2026-09-03) ---------------------------------- */
+  --d-blau:            #3aa1cd; /* Splash-Grund, Hinweis-Balken, Logo */
+  --d-blau-reiter:     #0b95d0; /* Reiter THEMA */
+  --d-gelb:            #fced62; /* Button, Kacheltext offen, Icon, Eck-Marker, Punkte */
+  --d-schwarz:         #171717;
+  --d-weiss:           #f6f6f6;
+  --d-grau:            #575757; /* Firmenlogo-Box */
+  --d-neu-bg:          #71ff51; --d-neu-ink:    #1d3917;
+  --d-link-bg:         #23b6f5; --d-link-ink:   #0e1b3d;
+  --d-sel-bg:          #193d18; --d-sel-ink:    #58ff71;
+  --d-asked-bg:        #3d3d3d; --d-asked-ink:  #b5b5b5;
+  --d-nochmal-bg:      #b5b5b5; --d-nochmal-ink:#161616;
+
+  /* --- Punktraster (gelb, versetzt) ------------------------------------------ */
+  --d-dot-color:       var(--d-gelb);
+  --d-dot-gap:         44px;   /* Kachel (zwei Lagen versetzt → 22 px Punktabstand, Mockup) */
+
+  /* --- Handy-Icon (Figma: 50×78 bei 11,8°) ----------------------------------- */
+  --d-icon-w:          50px;
+  --d-icon-h:          78px;
+  --d-icon-tilt:       11.8deg;
 }
 
 html, body {
@@ -29,10 +59,46 @@ html, body {
   height: 100%;
   width: 100%;
   overflow: hidden;
-  font-family: var(--s-font);
+  font-family: var(--d-font);
   background: #000;
   touch-action: manipulation;      /* kein Doppeltipp-Zoom */
   -webkit-tap-highlight-color: transparent;
+}
+
+/* --- Pixel-Halo: Textkasten mit ausgefransten Kanten -------------------------
+   Figma setzt dicke Textkonturen auf die Pixelschrift; im Browser übernimmt
+   das ein SVG-Filter (feMorphology dilate) — Definitionen in index.html.
+   Je Farbe/Radius ein Filter, hier nur die Zuordnung. */
+.px-kachel          { filter: url(#px-000000-8); }
+.px-kachel--asked   { filter: url(#px-3d3d3d-8); }
+.px-kachel--sel     { filter: url(#px-193d18-8); }
+.px-reiter--thema   { filter: url(#px-0b95d0-5); }
+.px-reiter--neu     { filter: url(#px-71ff51-5); }
+.px-reiter--link    { filter: url(#px-23b6f5-5); }
+.px-reiter--nochmal { filter: url(#px-b5b5b5-5); }
+.px-reiter--neutral { filter: url(#px-eeeeee-5); }
+.px-title           { filter: url(#px-171717-10); }
+.px-back            { filter: url(#px-000000-8); }
+.px-jobsar          { filter: url(#px-3aa1cd-4); }
+
+/* --- Punktraster als Ebene (Maske aus gekacheltem SVG-Rect, zweite Lage um
+   die halbe Kachel versetzt). Punkt = 1/22 der Kachel = 2 px bei 44 px. ---- */
+.d-dots::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-color: var(--d-dot-color);
+  --dot-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 22'%3E%3Crect width='1' height='1' fill='black'/%3E%3C/svg%3E");
+  -webkit-mask-image: var(--dot-mask), var(--dot-mask);
+  mask-image: var(--dot-mask), var(--dot-mask);
+  -webkit-mask-repeat: repeat, repeat;
+  mask-repeat: repeat, repeat;
+  -webkit-mask-size: var(--d-dot-gap) var(--d-dot-gap);
+  mask-size: var(--d-dot-gap) var(--d-dot-gap);
+  -webkit-mask-position: 0 0, calc(var(--d-dot-gap) / 2) calc(var(--d-dot-gap) / 2);
+  mask-position: 0 0, calc(var(--d-dot-gap) / 2) calc(var(--d-dot-gap) / 2);
 }
 
 /* --- AR-Container: Vollbild, MindAR hängt hier Video + Canvas rein -------- */
@@ -60,187 +126,256 @@ html, body {
 }
 #question-root > * { pointer-events: auto; }
 
-/* --- DET-Logo oben links (klickbar → Stellenanzeige, neuer Tab) ------------ */
-#detLogo {
-  position: fixed;
-  left: 0;
-  top: calc(32px + env(safe-area-inset-top));
-  z-index: 6;
-  display: none;                    /* erst nach dem Start sichtbar */
-  align-items: center;
-  background: var(--s-outline);
-  border-radius: 0 8px 8px 0;       /* links bündig am Rand, links eckig */
-  padding: 8px 12px 8px calc(10px + env(safe-area-inset-left));
-  transform-origin: left center;
-  transition: transform 0.15s ease;
-}
-#detLogo:active { transform: scale(0.95); }
-#detLogo img { height: 18px; display: block; pointer-events: none; }
-body.launched #detLogo { display: flex; }
-
-/* --- Tracking-Hinweis (Karte verloren) -------------------------------------- */
-#trackingHint {
-  position: fixed;
-  top: calc(90px + env(safe-area-inset-top));
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 6;
-  display: none;
-  font-family: var(--s-font);
-  font-size: 22px;
-  color: var(--s-yellow);
-  background: var(--s-outline);
-  padding: 10px 16px;
-  border-radius: 8px;
-  white-space: nowrap;
+/* ============================================================================
+   SUPPORT-ZEILE — Handy-Icon + Balken (Suche, Karte gefunden, Karte verloren,
+   Ruhezustand). Markup aus js/supportUI.js. Maße Figma mock_01/02:
+   Icon links 21 / oben 8, Balken links 67 / oben 43, zweite Zeile +41 / +45.
+   ============================================================================ */
+.support {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
   pointer-events: none;
 }
+.support-icon {
+  flex: 0 0 auto;
+  width: var(--d-icon-w);
+  height: var(--d-icon-h);
+  margin: 8px 0 0 21px;
+  transform: rotate(var(--d-icon-tilt));
+  transform-origin: center;
+  filter: drop-shadow(-3px 3px 0 rgba(0, 0, 0, 0.45));
+}
+.support-icon img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  pointer-events: none;
+}
+.support-lines {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 35px 0 0 -4px;
+  min-width: 0;
+}
+.support-line {
+  display: inline-block;
+  font-family: var(--d-font-support);
+  font-size: var(--d-support-lg);
+  line-height: 1;
+  color: #fff;
+  background: var(--d-blau);
+  padding: 8px 10px 6px;
+  white-space: nowrap;
+  max-width: calc(100vw - 80px);
+  overflow: hidden;
+  text-overflow: clip;
+}
+.support-line--gelb { background: var(--d-gelb); color: var(--d-schwarz); }
+.support-line--einzug { margin-left: 41px; }
+.support-line--md { font-size: var(--d-support-md); }
+.support-line--pulse { animation: d-pulse 1.6s ease-in-out infinite; }
+@keyframes d-pulse { 50% { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) { .support-line--pulse { animation: none; } }
 
 /* ============================================================================
-   SPLASH — Vollbild-Startscreen vor dem AR-Launch.
+   SUCHRAHMEN — vier weiße Screen-Ecken (mock_01), bildschirmfest, 225×295,
+   horizontal mittig, vertikal bei 40 %. Sichtbar nur in body.scanning.
+   ============================================================================ */
+#scanFrame {
+  position: fixed;
+  left: 50%;
+  top: 40%;
+  width: 225px;
+  height: 295px;
+  transform: translate(-50%, -50%);
+  z-index: 4;
+  display: none;
+  pointer-events: none;
+}
+body.launched.scanning #scanFrame { display: block; }
+#scanFrame img {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  filter: drop-shadow(0 0 0 transparent);
+}
+#scanFrame .c-tl { left: 0;  top: 0;    transform: rotate(90deg); }
+#scanFrame .c-tr { right: 0; top: 0;    transform: rotate(180deg); }
+#scanFrame .c-br { right: 0; bottom: 0; transform: rotate(-90deg); }
+#scanFrame .c-bl { left: 0;  bottom: 0; }
+
+/* ============================================================================
+   KARTE VERLOREN — Support-Zeile mittig im Bild (mock 05: Icon oben 414/874,
+   Balken 449/874). Das Menü bleibt darunter stehen (eingefroren).
+   ============================================================================ */
+#lostHint {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 47%;
+  z-index: 6;
+  display: none;
+  pointer-events: none;
+}
+#lostHint.show { display: block; }
+#lostHint .support-icon { margin-left: 20px; }
+
+/* ============================================================================
+   SPLASH — Vollbild-Startscreen (mock_0): Blau, gelbes Raster, weißes Band
+   mit Logo, „Du scannst" / Berufsname / „bei" / Firmenlogo, „SCAN STARTEN".
    ============================================================================ */
 .splash {
-  background-color: var(--s-bg);
+  background-color: var(--d-blau);
   position: fixed;
   inset: 0;
   z-index: 2000;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
   text-align: center;
   box-sizing: border-box;
-  padding: calc(28px + env(safe-area-inset-top)) 24px
-           calc(40px + env(safe-area-inset-bottom)) 24px;
+  padding: calc(24px + env(safe-area-inset-top)) 0
+           calc(40px + env(safe-area-inset-bottom)) 0;
   overflow: hidden;
 }
 body.launched .splash { display: none; }
+.splash.d-dots::before { z-index: 0; }
 
-/* Versetztes Punktraster (gleiche Technik wie das Frage-Panel) */
-.splash::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background-color: var(--s-dot-color);
-  --dot-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 6 6'%3E%3Crect width='1' height='1' fill='black'/%3E%3C/svg%3E");
-  -webkit-mask-image: var(--dot-mask), var(--dot-mask);
-  mask-image: var(--dot-mask), var(--dot-mask);
-  -webkit-mask-repeat: repeat, repeat;
-  mask-repeat: repeat, repeat;
-  -webkit-mask-size: var(--s-dot-gap) var(--s-dot-gap);
-  mask-size: var(--s-dot-gap) var(--s-dot-gap);
-  -webkit-mask-position: 0 0, calc(var(--s-dot-gap) / 2) calc(var(--s-dot-gap) / 2);
-  mask-position: 0 0, calc(var(--s-dot-gap) / 2) calc(var(--s-dot-gap) / 2);
-}
-
-/* DEIN ERSTER TAG Logo — weiße Wortmarke im schwarzen Quadrat, oben links */
-.det-logo {
+/* Weißes Band mit Logo „DEIN ERSTER TAG · Jobs.AR" (Figma 449:1896: 110 hoch) */
+.splash-band {
   position: relative;
   z-index: 1;
-  align-self: flex-start;
-  background: var(--s-outline);
-  border-radius: 10px;
-  padding: 12px;
-  width: 100px;
-  box-sizing: border-box;
+  width: 100%;
+  height: 110px;
+  background: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  user-select: none;
+  flex: 0 0 auto;
 }
-.det-logo > img { display: block; width: 100%; height: auto; }
+.splash-logo { position: relative; width: 89px; height: 66px; }
+.splash-logo > img { position: absolute; left: 0; top: 0; width: 89px; height: 52px; display: block; }
+.splash-jobsar {
+  position: absolute;
+  left: 53px;
+  top: 43px;
+  font-family: var(--d-font);
+  font-size: 23.5px;
+  line-height: 0.69;
+  color: #fff;
+  white-space: nowrap;
+}
 
-/* Mittlerer Block: Kicker + Berufsname + Firmen-Logo */
+/* Mittlerer Block (Figma 449:1186: 334 breit, gap 24) */
 .splash-center {
   position: relative;
   z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
-  width: 100%;
-  max-width: 340px;
+  gap: 24px;
+  width: 334px;
+  max-width: calc(100% - 40px);
+  margin-top: 34px;
+  flex: 0 0 auto;
 }
 .splash-kicker {
-  font-family: var(--s-font);
-  font-size: 36px;
-  letter-spacing: 1.5px;
-  color: var(--s-yellow);
-  text-transform: uppercase;
+  font-family: var(--d-font-support);
+  font-size: var(--d-support-splash);
+  line-height: 1;
+  color: #fff;
   margin: 0;
-  opacity: 0.85;
 }
 .card-name {
-  font-family: var(--s-font);
-  font-size: 38px;
-  line-height: 0.92;
-  letter-spacing: 0.3px;
-  color: var(--s-yellow);
-  background: var(--s-outline);
-  border-radius: 4px;
-  padding: 12px 18px;
+  font-family: var(--d-font);
+  font-size: 43px;
+  line-height: 0.78;
+  color: #fff;
   margin: 0;
-  text-align: left;
-  align-self: flex-start;
-  white-space: normal;
+  text-wrap: balance;
 }
-.company { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.company-label {
-  font-family: var(--s-font);
-  font-size: 16px;
-  letter-spacing: 1.5px;
-  color: var(--s-text-light);
-  opacity: 0.6;
-  text-transform: uppercase;
+.company-box {
+  width: 222px;
+  height: 111px;
+  box-sizing: border-box;
+  background: var(--d-grau);
+  border: 6px solid #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
 }
-.company-logo-box { display: flex; align-items: center; justify-content: center; transform: rotate(1.5deg); }
-.company-logo-box > img { display: block; width: 100px; height: auto; }
+.company-box > img { display: block; max-width: 100%; max-height: 100%; }
+/* Firmenname als Text, wenn die Karte kein Logo mitbringt (kein Mockup —
+   abgeleitet: Support-Schrift weiß, wie der Platzhalter „Firmenlogo") */
+.company-text {
+  font-family: var(--d-font-support);
+  font-size: 22px;
+  line-height: 1.1;
+  color: #fff;
+  text-wrap: balance;
+}
+.company-box > img[hidden], .company-text[hidden] { display: none; }
 
-/* Start-CTA */
+/* Start-CTA (Figma 448:1141: 294×88, Rand 7, Schattenblock −9/+8) */
 .splash-cta {
   position: relative;
   z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: flex-end;
   gap: 16px;
   width: 100%;
+  flex: 1 1 auto;
+  padding-bottom: 70px;
 }
 #launchButton {
-  font-family: var(--s-font);
-  font-size: 34px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--s-outline);
-  background: var(--s-yellow);
-  border: var(--s-border-width) solid var(--s-outline);
-  border-radius: var(--s-radius);
-  box-shadow: 0 var(--s-shadow-depth) 0 var(--s-outline);
-  padding: 14px 54px;
-  min-height: 60px;
+  width: 294px;
+  height: 88px;
+  box-sizing: border-box;
+  background: var(--d-gelb);
+  border: 7px solid var(--d-schwarz);
+  border-radius: 0;
+  box-shadow: -9px 8px 0 var(--d-schwarz);
+  padding: 0;
   cursor: pointer;
   user-select: none;
-  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1),
-              box-shadow 0.12s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
-#launchButton:active {
-  transform: translateY(4px);
-  box-shadow: 0 2px 0 var(--s-outline);
+#launchButton:active { transform: translate(-6px, 5px); box-shadow: -3px 3px 0 var(--d-schwarz); }
+#launchButton > span {
+  font-family: var(--d-font);
+  font-size: 43px;
+  line-height: 0.69;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #fff;
+  word-spacing: 10px;       /* Wortabstand > 2×Halo-Radius → ein Kasten pro Wort (Mockup) */
+  white-space: nowrap;
+  padding: 6px 0 0;
 }
 
 /* Ladezustand: Button → Spinner */
 #launchButton:disabled {
   background: none;
-  background-color: transparent;
   border: none;
   box-shadow: none;
   width: 60px;
-  min-height: 60px;
+  height: 60px;
   padding: 0;
   visibility: hidden;
 }
+#launchButton:disabled > span { display: none; }
 #launchButton:disabled::before {
   content: " ";
   visibility: visible;
@@ -248,10 +383,9 @@ body.launched .splash { display: none; }
   width: 56px;
   height: 56px;
   margin: 0;
-  border-radius: 50%;
   box-sizing: border-box;
-  border: 6px solid var(--s-yellow);
-  border-color: var(--s-yellow) transparent var(--s-yellow) transparent;
+  border: 6px solid #fff;
+  border-color: #fff transparent #fff transparent;
   animation: loading-animation 1.2s linear infinite;
 }
 @keyframes loading-animation {
@@ -259,43 +393,29 @@ body.launched .splash { display: none; }
   100% { transform: rotate(360deg); }
 }
 
-/* Fehlermeldung (Kamera verweigert etc.) */
+/* Fehlermeldung (Start fehlgeschlagen) */
 #errorBox {
   display: none;
   position: relative;
   z-index: 1;
-  font-family: var(--s-font);
-  font-size: 20px;
+  font-family: var(--d-font-support);
+  font-size: 14px;
+  line-height: 1.3;
   color: #fff;
-  background: #b3261e;
-  border: 3px solid var(--s-outline);
-  border-radius: 10px;
+  background: var(--d-schwarz);
   padding: 12px 16px;
   max-width: 320px;
 }
 
 @media (max-width: 380px) {
-  .card-name     { font-size: 32px; }
-  .splash-kicker { font-size: 32px; }
+  .card-name { font-size: 36px; }
+  :root { --d-support-splash: 26px; }
 }
-
-/* --- Firmenname als Text, wenn die Karte kein Logo mitbringt ---------------- */
-.company-text {
-  font-family: var(--s-font);
-  font-size: 34px;
-  letter-spacing: 0.5px;
-  color: var(--s-outline);
-  background: #fff;
-  border: var(--s-border-width) solid var(--s-outline);
-  border-radius: 8px;
-  padding: 6px 16px;
-  line-height: 1;
-}
-.company-logo-box > img[hidden], .company-text[hidden] { display: none; }
 
 /* ============================================================================
    KAMERA ABGELEHNT — eigener Bildschirm im Splash (body.camera-denied).
-   Dialogsystem 2026-09-03, UI-Inventar Abschnitt 6 „Zustände ohne Entwurf".
+   Kein Mockup — abgeleitet aus Splash-Bausteinen (Titel wie Berufsname,
+   Text in Support-Schrift, Knopf wie „Scan starten").
    ============================================================================ */
 .perm-screen {
   display: none;
@@ -305,44 +425,49 @@ body.launched .splash { display: none; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 18px;
+  gap: 22px;
   padding: 32px 28px;
   box-sizing: border-box;
-  background-color: var(--s-bg);
+  background-color: var(--d-blau);
   text-align: center;
 }
 body.camera-denied .perm-screen { display: flex; }
 .perm-title {
-  font-family: var(--s-font);
-  font-size: 34px;
-  line-height: 0.95;
-  color: var(--s-yellow);
-  background: var(--s-outline);
-  border-radius: 4px;
-  padding: 10px 16px;
+  font-family: var(--d-font);
+  font-size: 40px;
+  line-height: 0.78;
+  color: #fff;
   margin: 0;
 }
 .perm-text {
-  font-family: var(--s-font);
-  font-size: 24px;
-  line-height: 1.05;
-  color: var(--s-text-light);
+  font-family: var(--d-font-support);
+  font-size: 15px;
+  line-height: 1.35;
+  color: #fff;
   margin: 0;
-  max-width: 340px;
+  max-width: 330px;
 }
-.perm-text--small { font-size: 19px; opacity: 0.7; }
+.perm-text--small { font-size: 12px; opacity: 0.8; }
 #permReload {
-  font-family: var(--s-font);
-  font-size: 30px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--s-outline);
-  background: var(--s-yellow);
-  border: var(--s-border-width) solid var(--s-outline);
-  border-radius: var(--s-radius);
-  box-shadow: 0 var(--s-shadow-depth) 0 var(--s-outline);
-  padding: 12px 40px;
+  width: 250px;
+  height: 72px;
+  box-sizing: border-box;
+  background: var(--d-gelb);
+  border: 7px solid var(--d-schwarz);
+  border-radius: 0;
+  box-shadow: -9px 8px 0 var(--d-schwarz);
   margin-top: 8px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-#permReload:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--s-outline); }
+#permReload > span {
+  font-family: var(--d-font);
+  font-size: 36px;
+  line-height: 0.69;
+  text-transform: uppercase;
+  color: #fff;
+  padding-top: 5px;
+}
+#permReload:active { transform: translate(-6px, 5px); box-shadow: -3px 3px 0 var(--d-schwarz); }

@@ -1,6 +1,6 @@
 # CLAUDE.md — DETAR WebAR
 
-Stand: 2026-09-03 · Build 17 (Dialogsystem) · Live: https://l77d.github.io/detar
+Stand: 2026-09-03 · Build 18 (UI-Update) · Live: https://l77d.github.io/detar
 
 ## Projekt
 
@@ -11,6 +11,43 @@ Gesichtsanimation). Port des Zapworks/Mattercraft-Prototyps auf MindAR — kein
 LLM, keine API, kein Build-Schritt, statische Site. v1 enthält NUR den Dialog
 (Scope 31.08.2026); der Einblick (Portal/Galerie, `js/portalView.js`) bleibt im
 Repo, wird aber nicht mehr aufgebaut.
+
+## UI (seit Build 18, 2026-09-03)
+
+Quelle: Figma „DETAR" (Seite UI, Komponenten `support`/`frage`/`Auswahl`,
+mock_0–05) + Mockup-PNGs in `Produktion/Quellmaterial/0309/`. Entscheidungen
+Michael 2026-09-03: Themen-Namen im Mockup sind Platzhalter (Inhalt bleibt
+Elektroniker-Karte) · keine Fußzeile, kein Link-Eintrag, kein DET-Logo/Job-Link
+nach dem Splash · „Ich muss weiter" ist eine Kachel im Themenraster (4. Feld)
+und in jedem Thema · Sprechblase bleibt 3D über dem Kopf · Attract nur
+Eck-Marker · Karte verloren = Menü eingefroren, nicht bedienbar.
+
+- **Tokens** in `css/app.css` (`--d-*`): Blau `#3aa1cd`, Reiter-Blau `#0b95d0`,
+  Gelb `#fced62`, Schwarz `#171717`, NEU `#71ff51/#1d3917`, LINK
+  `#23b6f5/#0e1b3d`, ausgewählt `#193d18/#58ff71`, gefragt `#3d3d3d/#b5b5b5`.
+- **Fonts:** Jersey 10 (Hauptschrift) + **Silkscreen** (OFL,
+  `assets/fonts/`) für Support-Zeilen — Ersatz für FS Pixel Sans aus dem
+  Mockup (kommerziell). Silkscreen läuft ~1,6× breiter, Größen daher auf die
+  Mockup-Kastenbreiten zurückgerechnet (22 px Hinweise, 20 px Kopfzeile).
+- **Pixel-Halo** (Textkasten mit ausgefransten Kanten): SVG-Filter
+  `feMorphology dilate` je Farbe/Radius, Definitionen in `index.html`,
+  Zuordnung `.px-*` in `app.css`. Sprechblase (Canvas) macht dasselbe über
+  Kontur mit `lineJoin miter` + `lineCap square`.
+- `js/supportUI.js` — Handy-Icon (6 PNG-Frames, `assets/ui/icon-handy/`)
+  + Balken; Zustände suchen/gefunden/ruhe. Genutzt von `questionMenu.js`
+  (Suche, Karte gefunden, Ruhezustand) und `main.js` (`#lostHint`).
+- `js/questionMenu.js` — Themen als festes 2×2-Raster; Fragen als Karussell
+  mit 2×2 Kacheln je Seite + Seitenpunkte; Kachel = Reiter (THEMA/NEU/LINK/✅)
+  über Textkasten 178×73, ±2,34° Tilt. Maße 1:1 aus dem 402-px-Figma-Frame.
+- `js/activationFX.js` — vier gelbe Eck-Marker auf den Kartenecken (Canvas-
+  Textur aus dem Figma-Pfad), wabern (`ACTFX.bobHeight/bobSec`), ploppen beim
+  Tap. Glow + Partikel sind weg; `ACTFX`-Keys sind neu (tuning.json hat
+  keinen ACTFX-Block).
+- Suchrahmen `#scanFrame` (weiße Ecken) über `body.scanning` — an nach dem
+  Start, aus bei der ersten Erkennung.
+- **Ohne Entwurf, abgeleitet** (Michael liefert später Mockups nach):
+  Antwortoptionen, Weiter-Kachel, Ruhezustand, Kamera-abgelehnt, Firmenname-
+  Text-Fallback im Splash, Seitenzähler, NEU-Punkt am Zurückpfeil.
 
 ## Dialogsystem (seit Build 17, 2026-09-03)
 
@@ -34,19 +71,20 @@ Definition: `Dialogsystem/DETAR_Dialogsystem.md` im Projektordner; Prototyp
   Gedankenstrich, dann Wortgrenze), gemessen am echten Font; Seitenzähler
   oben rechts. Kein stilles Kappen mehr.
 - `js/bubbleText.js` — Markup-Parser, Satz-/Wortgrenzen.
-- `js/questionMenu.js` — Phasen: themen (Themenkarten) → thema ([←] Kopfzeile
-  mit NEU-Punkt, Fragen mit Marken neu/nochmal/link) · options · next · idle;
-  Fußzeile Ausstieg + Link auf beiden Ebenen. Karussell-Layout wie bisher,
-  Styling = Struktur im alten Look (neues Design folgt).
+- `js/questionMenu.js` — Phasen: themen → thema ([←] Kopfzeile mit NEU-Punkt,
+  Fragen mit Reitern NEU/LINK/✅) · options · next · idle; Optik siehe „UI".
+  Ausstieg als Kachel (`engine.exitQuestion()`), Link-Frage wird nicht
+  angezeigt (`permaQuestions()` bleibt für später).
 - `config.js → POSES`: Emotion-Tag → Körper (idle/affirm/think), bis der Rig
   die elf Posen liefert. `CHOREO`: continueDelayMs, collapseDelayMs,
   collapseSec, trackingLostMs (Menü friert nach Verlust ein).
 - Randzustände: Kamera abgelehnt → `body.camera-denied` (eigener Bildschirm im
-  Splash); Tracking verloren → `menu.setFrozen()`.
+  Splash); Tracking verloren → `menu.setFrozen()` + `#lostHint` (Icon-Zeile
+  mittig, Menü bleibt ungedimmt stehen).
 - Tap-Entprellung in main.js (pointerup + click-Fallback binnen 120 ms) —
   seit dem Dialogsystem wäre Doppel-Auslösung NICHT mehr harmlos.
 - Splash: `card.companyLogo` (Pfad) oder Firmenname als Text; `card.jobUrl`
-  hinter dem DET-Label.
+  wird seit Build 18 nicht mehr angezeigt (DET-Label raus).
 - Build 16 ist vom ungemergten Branch `tracking-runde5` belegt (Patch in
   `patches/`), deshalb springt main von 15 auf 17.
 

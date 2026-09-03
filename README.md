@@ -9,6 +9,10 @@ keine Lizenzkosten, kein Build-Schritt, eine einzige statische Website.
 **Kein LLM, keine externe API** — alle Inhalte sind autorisiert und hartkodiert
 (`cards/*.js`). Einzige Laufzeit-Abhängigkeiten: three.js + MindAR per CDN.
 
+UI (Build 18, 2026-09-03) nach Figma „DETAR": Blau/Gelb/Schwarz, Pixel-Halo-
+Kästen, Handy-Icon, Eck-Marker. Fonts: Jersey 10 + Silkscreen, beide SIL Open
+Font License (`assets/fonts/`, Lizenztexte daneben).
+
 ---
 
 ## Veröffentlichen (GitHub Pages)

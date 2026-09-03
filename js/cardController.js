@@ -1,7 +1,7 @@
 /* =============================================================================
    DETAR — CardController: das Gehirn. Choreographie (Stand 2026-09-03):
-   Karte gefunden → AKTIVIER-PHASE (Karten-Glow + Partikel, „Tipp auf die
-   Karte!") → Tap auf die Karte → Burst → Pop-In → Begrüßung (Typewriter)
+   Karte gefunden → AKTIVIER-PHASE (gelbe Eck-Marker auf der Karte, „Karte
+   gefunden / Tipp sie an!") → Tap auf die Karte → Marker ploppen → Pop-In → Begrüßung (Typewriter)
    → Menü fährt ein → HUB (Themen → Fragen) → Antwort → ggf. Weiter-Schritt
    → ggf. Rückfrage der Figur (nach der 1. und 3. Antwort) → zurück in den Hub
    → Ausstieg „Ich muss weiter" → Fazit-Rückfrage → Verabschiedung → Figur
@@ -55,7 +55,8 @@ export class CardController {
     this.nodes.FigureRoot.scale.copy(this.nodes.FIGURE_HOME.scale);
     this.wander.reset();
     this.phase = "waiting";
-    window.setTimeout(() => this.onCardSeen(), 600);
+    document.body.classList.add("scanning"); // Suchrahmen wieder an (wie nach dem Start)
+    window.setTimeout(() => { document.body.classList.remove("scanning"); this.onCardSeen(); }, 600);
   }
   clearTimers() {
     if (this.idleTimer !== null) { clearTimeout(this.idleTimer); this.idleTimer = null; }
@@ -75,8 +76,8 @@ export class CardController {
     if (this.fx && CHOREO.requireTap !== "nein") {
       this.phase = "attract";
       sound.cardFound(); // Ping: „da ist was auf der Karte"
-      this.fx.play();
-      this.menu.showAttract(); // „Tipp auf die Karte!"
+      this.fx.play();          // Eck-Marker auf der Karte
+      this.menu.showAttract(); // „Karte gefunden / → Tipp sie an!"
     } else {
       this.phase = "intro";
       this.menu.hideOnboarding();

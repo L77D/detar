@@ -12,7 +12,7 @@ export const TYPO = {
   fontWeight: "normal",
   fontSize: 52,
   lineSpacing: 0.8,
-  textColor: "#ffffff",
+  textColor: "#f6f6f6", // UI-Update 2026-09-03 (Figma)
   strokeColor: "#000000",
   strokeWidth: 22,
   paddingPx: 28,
@@ -26,7 +26,7 @@ export const TYPO = {
   // alphabetic) + Highlight-Effekte im Sprechtext (Auszeichnung in der Karte:
   // <marker> <gross> <leise> <knall>; welle/zittern werden nicht bewegt).
   baselineRatio: 0.8,
-  fxMarkerColor: "#ffdd00", // <marker>: gelbe Schrift + Unterstrich; auch Seitenzähler
+  fxMarkerColor: "#fced62", // <marker>: gelbe Schrift + Unterstrich; auch Seitenzähler (Figma-Gelb)
   fxGrossScale: 1.16,       // <gross>: Schriftgröße × Faktor
   fxLeiseAlpha: 0.62,       // <leise>: Deckkraft der Füllung
   fxKnallMs: 260,           // <knall>: Dauer des Aufploppens je Zeichen
@@ -193,19 +193,17 @@ export const STAB = {
   refHz: 60,
 };
 
-// Aktivier-Phase (ActivationFX): Karten-Glow + aufsteigende Pixel-Partikel,
-// bevor die Figur erscheint. Optik-Dashboard — alles im Dev-Panel regelbar.
+// Aktivier-Phase (ActivationFX, UI-Update 2026-09-03): vier gelbe Eck-Marker
+// auf den Kartenecken, wabern leicht auf und ab; beim Tap ploppen sie auf und
+// faden (dann kommt die Figur). Glow + Partikel der Vorversion sind entfernt.
 export const ACTFX = {
-  count: 16,           // Partikel-Anzahl (Regler baut den Pool neu)
-  size: 0.008,         // Basisgröße der Quadrate (Karten-Einheiten)
-  riseHeight: 0.07,    // wie hoch sie aufsteigen
-  riseSec: 1.8,        // Dauer eines Aufstiegs
-  pulseSec: 1.6,       // Glow-Puls-Periode
-  glowOpacity: 0.5,    // Glow-Stärke (0–1)
-  burstSec: 0.7,       // Dauer des Tap-Blitzes bis zur Figur
-  glowColor: "#ffdd00",
-  color1: "#ffdd00",   // Partikel-Farben (Karten-Look: gelb/weiß)
-  color2: "#ffffff",
+  markerSize: 0.14,    // Kantenlänge der Marker (Anteil Kartenbreite; Figma: 32 px bei ~230 px Karte)
+  bobHeight: 0.05,     // Hub des Waberns (Anteil Kartenbreite)
+  bobSec: 1.6,         // Periode des Waberns (s)
+  burstSec: 0.35,      // Dauer des Aufploppens beim Tap bis zur Figur
+  color: "#fced62",    // Marker-Füllung (Figma-Gelb)
+  outline: "#000000",  // Marker-Kontur
+  outlineWidth: 4.44,  // Konturstärke in viewBox-Einheiten (32,59 = Marker-Kante)
 };
 
 // Einblick-Modus (PortalView + FigureFlip, js/portalView.js): Portal-Parallax-

@@ -67,6 +67,11 @@ export class DialogEngine {
     return this.card.questions.filter((q) => (q.end || q.link) && this.unlocked.has(q.id))
       .sort((a, b) => (a.link ? 1 : 0) - (b.link ? 1 : 0));
   }
+  /* Ausstieg („Ich muss weiter") — seit dem UI-Update 2026-09-03 eine normale
+     Kachel im Themenraster und in jedem Thema (keine Fußzeile mehr). */
+  exitQuestion() {
+    return this.card.questions.find((q) => q.end && this.unlocked.has(q.id)) ?? null;
+  }
   /* Marken einer Frage: neu freigeschaltet, schon gefragt, führt nach außen. */
   badgesFor(q) {
     const out = [];

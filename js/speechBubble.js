@@ -246,8 +246,12 @@ export class SpeechBubble {
     const baseline = TYPO.fontSize * TYPO.baselineRatio;
     ctx.textBaseline = "alphabetic";
     ctx.textAlign = "left";
-    ctx.lineJoin = "round";
-    ctx.lineCap = "round";
+    // UI-Update 2026-09-03: Kontur mit Gehrung + eckigen Enden → aus der
+    // Kontur um die Pixelschrift wird der ausgefranste Kasten des Mockups
+    // (Figma: Textkontur), statt einer weichen runden Outline.
+    ctx.lineJoin = "miter";
+    ctx.miterLimit = 8;
+    ctx.lineCap = "square";
     // UNTEN VERANKERT: letzte Zeile immer auf derselben Höhe (über die
     // GESAMT-Zeilenzahl verankert, damit beim Typewriter nichts springt).
     const yTop = canvas.height - pad - this.lines.length * lineH;

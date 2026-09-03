@@ -1,23 +1,32 @@
 /* =============================================================================
-   DETAR — ActivationFX: „Aktiviere mich"-Phase auf der Karte, BEVOR die Figur
-   erscheint. Platzhalter-Optik (gut tunebar, leicht ersetzbar):
-   • Glow-Puls: additiv geblendete Radial-Gradient-Plane flach auf der Karte.
-   • Partikel: kleine Pixel-Quadrate (Karten-Deko-Look, gelb/weiß), steigen
-     von der Kartenfläche auf, drehen leicht, faden aus, respawnen.
-   • burst(): Tap-Feedback — Glow-Blitz + Partikel schießen hoch und faden.
+   DETAR — ActivationFX: „Karte gefunden"-Phase, BEVOR die Figur erscheint.
+   UI-UPDATE 2026-09-03 (Figma mock_02): vier gelbe Eck-Marker (L-Form mit
+   schwarzer Kontur, assets/ui/corner-gelb.svg) sitzen auf den Kartenecken,
+   Kerbe zur Kartenmitte, und wabern leicht auf und ab. Glow + Partikel der
+   Vorversion sind entfernt (Entscheidung Michael). burst(): Marker ploppen
+   kurz auf und faden, dann kommt die Figur.
    • tapPlane: unsichtbare Karten-Plane NUR für den Tap-Raycast (three.js-
      Raycaster ignoriert das visible-Flag — bewusst genutzt).
-
-   Alle Optik-Werte im ACTFX-Dashboard (js/config.js) → Dev-Panel-Regler.
-   Painter's-Algorithm-Regeln gelten: depthTest false, KEIN depthWrite,
-   renderOrder unter der Figur (Glow -1, Partikel 0.5 — Figur ab 0..3).
-   Eigene Optik ersetzen = nur diese Datei anfassen (play/stop/burst/tick
-   sind die Schnittstelle, die der CardController benutzt).
+   Optik-Werte im ACTFX-Dashboard (js/config.js) → Dev-Panel-Regler.
+   Painter's-Algorithm-Regeln: depthTest false, KEIN depthWrite, renderOrder
+   unter der Figur (0.5 — Figur ab 0..3, Marker sind nur sichtbar, solange
+   die Figur versteckt ist).
    ============================================================================= */
 import * as THREE from "three";
 import { ACTFX, SCENE } from "./config.js";
 
-const rand = (a, b) => a + Math.random() * (b - a);
+// L-Form aus dem Figma-Export (viewBox 32,59): Quadrat ohne die Ecke oben rechts
+const VB = 32.5934;
+const L_PATH = [[18.5188, 2.2219], [18.5188, 14.0744], [30.3713, 14.0744], [30.3713, 30.3713],
+                [2.2219, 30.3713], [2.2219, 2.2219]];
+// Ecken im Karten-Frame (X rechts, Z zur Unterkante) + In-Plane-Drehung, damit
+// die Kerbe (im Bild oben rechts) zur Kartenmitte zeigt.
+const CORNERS = [
+  { sx: -1, sz:  1, rot: 0 },               // unten links
+  { sx: -1, sz: -1, rot: -Math.PI / 2 },    // oben links
+  { sx:  1, sz: -1, rot: Math.PI },         // oben rechts
+  { sx:  1, sz:  1, rot: Math.PI / 2 },     // unten rechts
+];
 
 export class ActivationFX {
   constructor(worldRoot) {
@@ -29,159 +38,116 @@ export class ActivationFX {
     this.group = new THREE.Group();
     worldRoot.add(this.group);
 
-    // --- Glow-Plane (Radial-Gradient, additiv) --------------------------------
-    const cv = document.createElement("canvas");
-    cv.width = cv.height = 256;
-    const ctx = cv.getContext("2d");
-    const g = ctx.createRadialGradient(128, 128, 8, 128, 128, 128);
-    g.addColorStop(0, "rgba(255,255,255,1)");
-    g.addColorStop(0.55, "rgba(255,255,255,0.35)");
-    g.addColorStop(1, "rgba(255,255,255,0)");
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, 256, 256);
-    this.glowMat = new THREE.MeshBasicMaterial({
-      map: new THREE.CanvasTexture(cv),
-      transparent: true, opacity: 0,
-      depthTest: false, depthWrite: false,
-      blending: THREE.AdditiveBlending,
-      side: THREE.DoubleSide,
-    });
-    this.glow = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this.glowMat);
-    this.glow.rotation.x = -Math.PI / 2;
-    this.glow.position.y = 0.0012;
-    this.glow.renderOrder = -1; // hinter allem Flachen
-    this.group.add(this.glow);
-
     // --- Tap-Plane (unsichtbar, nur Raycast) ----------------------------------
-    this.tapPlane = new THREE.Mesh(
-      new THREE.PlaneGeometry(1, 1),
-      new THREE.MeshBasicMaterial()
-    );
+    this.tapPlane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial());
     this.tapPlane.visible = false;
     this.tapPlane.rotation.x = -Math.PI / 2;
     this.group.add(this.tapPlane);
 
-    // --- Partikel-Pool ----------------------------------------------------------
-    this.parts = [];
-    this.buildPool();
-    this.applySizes();
-    this.setVisible(false);
-  }
-
-  /* Pool (neu) aufbauen — auch live über den Dev-Regler „Anzahl". */
-  buildPool() {
-    for (const p of this.parts) {
-      this.group.remove(p.mesh);
-      p.mesh.geometry.dispose();
-      p.mesh.material.dispose();
-    }
-    this.parts = [];
-    for (let i = 0; i < ACTFX.count; i++) {
+    // --- Eck-Marker -------------------------------------------------------------
+    this.texture = null;
+    this.markers = CORNERS.map((c, i) => {
       const mat = new THREE.MeshBasicMaterial({
-        color: Math.random() < 0.5 ? ACTFX.color1 : ACTFX.color2,
-        transparent: true, opacity: 0,
-        depthTest: false, depthWrite: false,
-        side: THREE.DoubleSide,
+        map: null, transparent: true, opacity: 1,
+        depthTest: false, depthWrite: false, side: THREE.DoubleSide,
       });
       const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat);
       mesh.renderOrder = 0.5;
+      mesh.rotation.set(-Math.PI / 2, 0, c.rot);
+      mesh.visible = false;
       this.group.add(mesh);
-      const p = { mesh };
-      this.resetPart(p, true);
-      this.parts.push(p);
-    }
-    this.setVisible(this.state !== "idle");
+      return { mesh, corner: c, phase: (i * Math.PI) / 2 };
+    });
+    this.buildPool();
+    this.applySizes();
+  }
+
+  /* Textur (neu) zeichnen — auch live über die Farb-Regler im Dev-Panel. */
+  buildPool() {
+    const cv = document.createElement("canvas");
+    cv.width = cv.height = 128;
+    const ctx = cv.getContext("2d");
+    const s = 128 / VB;
+    ctx.clearRect(0, 0, 128, 128);
+    ctx.beginPath();
+    L_PATH.forEach(([x, y], i) => (i ? ctx.lineTo(x * s, y * s) : ctx.moveTo(x * s, y * s)));
+    ctx.closePath();
+    ctx.fillStyle = ACTFX.color;
+    ctx.fill();
+    ctx.lineJoin = "miter";
+    ctx.lineWidth = ACTFX.outlineWidth * s;
+    ctx.strokeStyle = ACTFX.outline;
+    ctx.stroke();
+    this.texture?.dispose();
+    this.texture = new THREE.CanvasTexture(cv);
+    this.texture.colorSpace = THREE.SRGBColorSpace;
+    for (const m of this.markers) { m.mesh.material.map = this.texture; m.mesh.material.needsUpdate = true; }
   }
 
   applySizes() {
     const w = SCENE.cardWidth;
     const h = w * SCENE.cardAspect;
-    this.glow.scale.set(w * 1.15, h * 1.15, 1);
     // Tap-Fläche großzügiger als die Karte (leichter zu treffen, v. a. schräg)
     this.tapPlane.scale.set(w * 1.25, h * 1.25, 1);
+    const size = w * ACTFX.markerSize;
+    for (const m of this.markers) {
+      m.mesh.scale.set(size, size, 1);
+      // Marker-Mitte sitzt auf der Kartenecke (halb drauf, halb drüber — mock_02)
+      m.mesh.position.x = m.corner.sx * (w / 2);
+      m.mesh.position.z = m.corner.sz * (h / 2);
+      m.mesh.position.y = 0.002;
+    }
   }
 
-  resetPart(p, randomPhase) {
-    const hw = SCENE.cardWidth * 0.42;
-    const hh = SCENE.cardWidth * SCENE.cardAspect * 0.42;
-    p.x = rand(-hw, hw);
-    p.z = rand(-hh, hh);
-    p.t = randomPhase ? Math.random() : 0;
-    p.speed = rand(0.75, 1.35);
-    p.spin = rand(-2.5, 2.5);
-    p.size = ACTFX.size * rand(0.6, 1.5);
-    p.sway = rand(0.15, 0.5) * ACTFX.size * 6;
-    p.swayHz = rand(0.5, 1.4);
-    p.mesh.scale.set(p.size, p.size, 1);
-  }
-
-  setVisible(v) {
-    this.glow.visible = v;
-    for (const p of this.parts) p.mesh.visible = v;
-  }
+  setVisible(v) { for (const m of this.markers) m.mesh.visible = v; }
 
   /* Attract-Phase starten (Karte gefunden, Figur noch versteckt). */
   play() {
     this.state = "attract";
     this.clock = 0;
     this.applySizes();
-    for (const p of this.parts) this.resetPart(p, true);
+    for (const m of this.markers) m.mesh.material.opacity = 1;
     this.setVisible(true);
   }
 
-  /* Tap-Feedback: Blitz + Partikel hochschießen, dann onDone (einmalig). */
+  /* Tap-Feedback: Marker ploppen auf und faden, dann onDone (einmalig). */
   burst(onDone) {
     if (this.state !== "attract") { onDone?.(); return; }
     this.state = "burst";
     this.burstT = 0;
     this.onBurstDone = onDone ?? null;
-    for (const p of this.parts) p.speed *= rand(2.2, 3.2);
   }
 
   stop() {
     this.state = "idle";
-    this.glowMat.opacity = 0;
     this.setVisible(false);
   }
 
   tick(dt) {
     if (this.state === "idle") return;
     this.clock += dt;
-    this.glowMat.color.set(ACTFX.glowColor);
+    const w = SCENE.cardWidth;
+    const base = w * ACTFX.markerSize;
+    const bob = w * ACTFX.bobHeight;
+    const omega = (Math.PI * 2) / Math.max(0.2, ACTFX.bobSec);
 
-    if (this.state === "attract") {
-      const pulse = 0.6 + 0.4 * Math.sin((this.clock / Math.max(0.1, ACTFX.pulseSec)) * Math.PI * 2);
-      this.glowMat.opacity = ACTFX.glowOpacity * pulse;
-    } else { // burst: kurzer Blitz, dann ausfaden
+    let k = 0;
+    if (this.state === "burst") {
       this.burstT += dt;
-      const k = Math.min(1, this.burstT / Math.max(0.1, ACTFX.burstSec));
-      this.glowMat.opacity = (1 - k) * Math.min(1, ACTFX.glowOpacity * 2.2);
-      if (k >= 1) {
-        const cb = this.onBurstDone;
-        this.onBurstDone = null;
-        this.stop();
-        cb?.();
-        return;
-      }
+      k = Math.min(1, this.burstT / Math.max(0.05, ACTFX.burstSec));
     }
-
-    const riseH = ACTFX.riseHeight;
-    for (const p of this.parts) {
-      p.t += (dt / Math.max(0.2, ACTFX.riseSec)) * p.speed;
-      if (p.t >= 1) {
-        if (this.state === "burst") { p.mesh.material.opacity = 0; continue; }
-        this.resetPart(p, false);
-      }
-      const m = p.mesh;
-      m.position.set(
-        p.x + Math.sin(this.clock * p.swayHz * Math.PI * 2) * p.sway,
-        p.t * riseH,
-        p.z
-      );
-      m.rotation.z = p.spin * p.t * Math.PI;
-      // Einblenden → oben ausfaden (sin-Bogen), im Burst zusätzlich dimmen
-      const fade = Math.sin(Math.PI * Math.min(1, p.t));
-      m.material.opacity = fade * (this.state === "burst" ? Math.max(0, 1 - this.burstT / ACTFX.burstSec) : 1);
+    for (const m of this.markers) {
+      const lift = 0.5 + 0.5 * Math.sin(this.clock * omega + m.phase);
+      m.mesh.position.y = 0.002 + bob * lift;
+      const s = base * (1 + k * 0.6);
+      m.mesh.scale.set(s, s, 1);
+      m.mesh.material.opacity = 1 - k;
+    }
+    if (this.state === "burst" && k >= 1) {
+      const cb = this.onBurstDone;
+      this.onBurstDone = null;
+      this.stop();
+      cb?.();
     }
   }
 }
