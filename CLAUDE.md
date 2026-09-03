@@ -1,13 +1,54 @@
 # CLAUDE.md — DETAR WebAR
 
-Stand: 2026-07-15 · Build 14 · Live: https://l77d.github.io/detar
+Stand: 2026-09-03 · Build 17 (Dialogsystem) · Live: https://l77d.github.io/detar
 
 ## Projekt
 
 Mobile WebAR-Demo (Studio2B / „DEIN ERSTER TAG"): Karte scannen → Comic-Figur
-steht auf der Karte, beantwortet hartkodierte Fragen (Sprechblase, Posen,
-Gesichtsanimation, Einblick-Portal). Port des Zapworks/Mattercraft-Prototyps
-auf MindAR — kein LLM, keine API, kein Build-Schritt, statische Site.
+steht auf der Karte und führt einen Dialog nach RPG-NPC-Vorbild (Hub mit
+Freischaltungen, Rückfragen der Figur, Sprechblase mit Seiten, Posen,
+Gesichtsanimation). Port des Zapworks/Mattercraft-Prototyps auf MindAR — kein
+LLM, keine API, kein Build-Schritt, statische Site. v1 enthält NUR den Dialog
+(Scope 31.08.2026); der Einblick (Portal/Galerie, `js/portalView.js`) bleibt im
+Repo, wird aber nicht mehr aufgebaut.
+
+## Dialogsystem (seit Build 17, 2026-09-03)
+
+Definition: `Dialogsystem/DETAR_Dialogsystem.md` im Projektordner; Prototyp
+`detar_dialog_v2.html` (Themenebene) ist die Referenz, die App portiert ihn 1:1.
+
+- `cards/elektroniker.js` — Kartendatei (Siemens-Dialog, PENNY-Figur/-Marker
+  als Platzhalter). Felder: `themen`, `initial`, `greeting{tag,text}`,
+  `asks[{trigger,prompt,options[{label,sets,unlocks,tag,reply}]}]`,
+  `questions[{id,thema,label,text,tag,unlocks,requires,link,url,end}]`,
+  `reentry.rules`. Text darf `<marker> <gross> <leise> <knall>` tragen
+  (`<welle>`/`<zittern>` werden geparst, nicht bewegt — Canvas-Entscheidung).
+- `js/dialogEngine.js` — Zustand + Regeln (unlocked/asked/fresh/vars/asksDone/
+  visits/view), kein DOM, kein 3D.
+- `js/cardController.js` — Ablauf: say() paginiert und blättert mit Weiter;
+  Weiter-Knopf NUR zwischen Seiten, vor einer Rückfrage und vor „Seite öffnen"
+  (window.open braucht die Nutzergeste). Ausstieg → Fazit → Abschied →
+  `activation.playOut()` (Figur klappt ein) → Phase `resting` → Tap auf die
+  Karte → Wiedereinstieg (beiläufige Zeile, Zustand bleibt).
+- `js/speechBubble.js` — `paginate()` schneidet am Satzende (Notfall Komma/
+  Gedankenstrich, dann Wortgrenze), gemessen am echten Font; Seitenzähler
+  oben rechts. Kein stilles Kappen mehr.
+- `js/bubbleText.js` — Markup-Parser, Satz-/Wortgrenzen.
+- `js/questionMenu.js` — Phasen: themen (Themenkarten) → thema ([←] Kopfzeile
+  mit NEU-Punkt, Fragen mit Marken neu/nochmal/link) · options · next · idle;
+  Fußzeile Ausstieg + Link auf beiden Ebenen. Karussell-Layout wie bisher,
+  Styling = Struktur im alten Look (neues Design folgt).
+- `config.js → POSES`: Emotion-Tag → Körper (idle/affirm/think), bis der Rig
+  die elf Posen liefert. `CHOREO`: continueDelayMs, collapseDelayMs,
+  collapseSec, trackingLostMs (Menü friert nach Verlust ein).
+- Randzustände: Kamera abgelehnt → `body.camera-denied` (eigener Bildschirm im
+  Splash); Tracking verloren → `menu.setFrozen()`.
+- Tap-Entprellung in main.js (pointerup + click-Fallback binnen 120 ms) —
+  seit dem Dialogsystem wäre Doppel-Auslösung NICHT mehr harmlos.
+- Splash: `card.companyLogo` (Pfad) oder Firmenname als Text; `card.jobUrl`
+  hinter dem DET-Label.
+- Build 16 ist vom ungemergten Branch `tracking-runde5` belegt (Patch in
+  `patches/`), deshalb springt main von 15 auf 17.
 
 **Stack (GEPINNT, nicht bumpen):** `mind-ar@1.2.5` + `three@0.160` per
 CDN-Importmap (`index.html`) — mind-ar 1.2.5 ist gegen three 0.160 gebaut.

@@ -21,7 +21,7 @@
    getunten Werte (Lauffeld, Bubble-Größen, Sprunghöhe …) gelten unverändert.
    ============================================================================= */
 import * as THREE from "three";
-import { card } from "../cards/lagerlogistik.js";
+import { card } from "../cards/elektroniker.js";
 import { TYPO, SCENE, STAB, CAM, CHOREO, loadTuning, syncCssVars } from "./config.js";
 import { buildRig } from "./rig.js";
 import { FaceAnimator } from "./faceAnimator.js";
@@ -31,7 +31,6 @@ import { ActivationAnim } from "./activationAnim.js";
 import { QuestionMenu } from "./questionMenu.js";
 import { CardController } from "./cardController.js";
 import { ActivationFX } from "./activationFX.js";
-import { PortalView, FigureFlip } from "./portalView.js";
 import { DebugOverlay } from "./debugOverlay.js";
 import { PoseStabilizer } from "./poseStabilizer.js";
 import { GyroFusion } from "./gyroFusion.js";
@@ -66,6 +65,10 @@ async function boot() {
   }
 
   el("cardName").textContent = card.profession;
+  // Firmenlogo nur, wenn die Karte eines mitbringt — sonst der Name als Text
+  const logoImg = el("companyLogo"), companyText = el("companyText");
+  if (card.companyLogo) { logoImg.src = card.companyLogo; logoImg.alt = card.company; companyText.hidden = true; }
+  else { logoImg.hidden = true; companyText.textContent = card.company ?? ""; }
   const logoLink = el("detLogo");
   logoLink.href = card.jobUrl;
 
@@ -98,12 +101,18 @@ async function boot() {
   });
 }
 
+/* Startfehler. Kamera abgelehnt → eigener Bildschirm ohne Kamerabild
+   (Dialogsystem 2026-09-03, UI-Inventar Abschnitt 6); alles andere bleibt
+   eine Fehlerzeile im Splash. */
 function showStartError(err) {
-  const box = el("errorBox");
   const isCam = /permission|notallowed|denied/i.test(String(err?.name) + String(err?.message));
-  box.textContent = isCam
-    ? "Kein Kamera-Zugriff. Bitte in den Browser-Einstellungen die Kamera für diese Seite erlauben und neu laden."
-    : "Start fehlgeschlagen. Bitte Seite neu laden. (" + (err?.message ?? err) + ")";
+  if (isCam) {
+    document.body.classList.add("camera-denied");
+    el("permReload").onclick = () => location.reload();
+    return;
+  }
+  const box = el("errorBox");
+  box.textContent = "Start fehlgeschlagen. Bitte Seite neu laden. (" + (err?.message ?? err) + ")";
   box.style.display = "block";
 }
 
@@ -142,17 +151,20 @@ function buildExperience({ renderer, scene, camera, worldRoot, isRunning, preTic
   const wander = new IdleWander(nodes, frame);
   const activation = new ActivationAnim(nodes);
   const fx = new ActivationFX(worldRoot);
-  // Einblick (Portal-Parallax + Figur-Flip) — nur wenn die Karte eine Galerie hat
-  const portal = new PortalView(worldRoot, frame, card.gallery ?? []);
-  const flip = new FigureFlip(nodes);
-  const menu = new QuestionMenu(el("question-root"), card.questions, (id) => controller.answerQuestion(id), {
-    galleryCount: card.gallery?.length ?? 0,
-    onTab: (tab) => controller.setTab(tab),
-    // über den Controller: wechselt Bild + spricht die Caption + synct Tabs
-    onNav: (dir) => controller.galleryNav(dir),
+  // Einblick (js/portalView.js) ist in v1 NICHT aktiv (Scope-Entscheidung
+  // 31.08.2026: nur Dialog) — Code bleibt im Repo, wird hier nicht aufgebaut.
+  let controller = null;
+  const menu = new QuestionMenu(el("question-root"), null, {
+    onQuestion: (q) => controller.answerQuestion(q),
+    onTheme: (id) => controller.onTheme(id),
+    onBack: () => controller.onBack(),
+    onOption: (o) => controller.onOption(o),
+    onNext: () => controller.onNext(),
+    onReentry: () => controller.onCardTapped(),
   });
-  const controller = new CardController({ card, nodes, bubble, face: faceAnim, wander, activation, menu, fx, portal, flip });
-  window.__detar = { controller, fx, portal, flip, nodes, camera, renderer, sound }; // Debug-Zugriff (Konsole)
+  controller = new CardController({ card, nodes, bubble, face: faceAnim, wander, activation, menu, fx });
+  menu.engine = controller.engine;
+  window.__detar = { controller, engine: controller.engine, fx, nodes, camera, renderer, sound }; // Debug-Zugriff (Konsole)
   const debug = DEBUG_MODE ? new DebugOverlay(worldRoot, nodes, frame) : null;
   if (debug) debug.setVisible(true);
 
@@ -194,25 +206,29 @@ function buildExperience({ renderer, scene, camera, worldRoot, isRunning, preTic
     nodes.BodyIdle, nodes.BodyAffirm, nodes.BodyThink,
     nodes.Head, nodes.FaceNeutral, nodes.FaceBlink, nodes.FaceTalk,
   ];
+  let _lastTapT = 0;
   function doTap(clientX, clientY) {
+    // Entprellen: pointerup UND der native click-Fallback (iOS) rufen doTap —
+    // seit dem Dialogsystem ist Doppel-Auslösung NICHT mehr harmlos (Blase
+    // überspringen + Weiter in einem Tap). Zweiter Aufruf binnen 120 ms fällt weg.
+    const nowT = performance.now();
+    if (nowT - _lastTapT < 120) return;
+    _lastTapT = nowT;
     const rect = renderer.domElement.getBoundingClientRect();
     _tapNdc.x = ((clientX - rect.left) / rect.width) * 2 - 1;
     _tapNdc.y = -(((clientY - rect.top) / rect.height) * 2 - 1);
     _ray.setFromCamera(_tapNdc, camera);
-    // Aktivier-Phase: Tap auf die KARTE (unsichtbare Tap-Plane) startet die Figur
-    if (controller.phase === "attract") {
+    // Aktivier-Phase + Ruhezustand: Tap auf die KARTE (unsichtbare Tap-Plane)
+    // startet die Figur bzw. holt sie zurück (Wiedereinstieg).
+    if (controller.phase === "attract" || controller.phase === "resting") {
       if (_ray.intersectObject(fx.tapPlane, false).length > 0) controller.onCardTapped();
       return;
     }
-    // Einblick-Modus: Tap auf einen Portal-Tab wechselt das Bild;
-    // Figur-Tap-Sprung bleibt aus.
-    if (controller.einblick || flip.active) {
-      if (controller.einblick && !flip.active && portal.tabs?.length) {
-        const hitsTab = _ray.intersectObjects(portal.tabs, false);
-        if (hitsTab.length > 0) controller.galleryTo(hitsTab[0].object.userData.tabIndex);
-      }
-      return;
+    // Sprechblase: Schreibvorgang überspringen bzw. Weiter-Schritt auslösen
+    if (bubble.element.visible && _ray.intersectObject(bubble.plane, false).length > 0) {
+      if (controller.onBubbleTapped()) return;
     }
+    if (controller.phase !== "live") return;
     const hits = _ray.intersectObjects(figureMeshes.filter((m) => m.visible), false);
     if (hits.length > 0) startFigureJump();
   }
@@ -240,8 +256,6 @@ function buildExperience({ renderer, scene, camera, worldRoot, isRunning, preTic
     if (!isRunning || isRunning()) {
       wander.tick(dt);
       tickFigureJump(dt); // nach wander: überschreibt die Position während des Sprungs
-      flip.tick(dt);      // Einblick: Figur-Flip (nach wander, gleiche Regel)
-      portal.tick(dt);    // Einblick: Parallax + Edge-Lock + Fades
       activation.tick(dt);
       fx.tick(dt);
       faceAnim.tick(dt);
@@ -372,12 +386,14 @@ async function startAR() {
     hint.style.display = "none";
     stab.onFound();
     controller.onCardSeen(); // greeted-Flag: Choreographie nur beim ersten Mal
+    controller.onTrackingFound(); // Menü wieder freigeben
   };
   anchor.onTargetLost = () => {
     stab.onLost();
     if (controller.greeted) {
       hint.textContent = "Karte wieder ins Bild nehmen";
       hint.style.display = "block";
+      controller.onTrackingLost(); // nach CHOREO.trackingLostMs friert das Menü ein
     }
   };
 

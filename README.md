@@ -1,7 +1,8 @@
 # DETAR — WebAR Trading Card (eigenständige App, ohne Zapworks)
 
-Mobile WebAR-Demo: Karte scannen, Comic-Figur steht auf der Karte, beantwortet
-angetippte Fragen mit Sprechblase, Posen und Gesichtsanimation. Kompletter Port
+Mobile WebAR-Demo: Karte scannen, Comic-Figur steht auf der Karte und führt
+einen Dialog nach RPG-NPC-Vorbild (Fragen nach Themen, Freischaltungen,
+Rückfragen der Figur) mit Sprechblase, Posen und Gesichtsanimation. Kompletter Port
 des Zapworks/Mattercraft-Prototyps auf **Open-Source-Tracking (MindAR)** —
 keine Lizenzkosten, kein Build-Schritt, eine einzige statische Website.
 
@@ -81,7 +82,10 @@ Datei löschen = zurück zu den Defaults.
 
 ## Neue Karte / neuer Beruf
 
-1. `cards/lagerlogistik.js` kopieren, Texte/Fragen/Link ändern.
+1. `cards/elektroniker.js` kopieren, Texte/Fragen/Rückfragen/Link ändern
+   (Datenmodell und Regeln: `Dialogsystem/DETAR_Dialogsystem.md` im Projekt-
+   ordner; Emotion-Tags aus dem geschlossenen Vokabular, Highlight-Tags
+   `<marker> <gross> <leise> <knall>`).
 2. Import oben in `js/main.js` auf die neue Datei umstellen.
 3. Neues Kartenbild als Tracking-Target kompilieren (s. u.) und
    `targets/card.mind` ersetzen.
@@ -117,12 +121,18 @@ css/question-menu.css Bottom-UI (Onboarding + Fragen-Karussell), CSS-Dashboard
 js/main.js            Boot, MindAR-Setup, Desktop-Modus, Figur-Tap, Loop
 js/config.js          ALLE Tuning-Dashboards + tuning.json-Merge
 js/rig.js             Figuren-Hierarchie (Transforms aus Scene.zcomp)
-js/cardController.js  Choreographie: Scan → Pop-In → Begrüßung → UI → Fragen
+js/cardController.js  Choreographie + Dialogablauf: Scan → Pop-In → Begrüßung →
+                      Hub (Themen → Fragen) → Antwort/Seiten → Rückfragen →
+                      Ausstieg → Ruhezustand → Wiedereinstieg
+js/dialogEngine.js    Gesprächszustand: Freischaltungen, Variable, Rückfragen
+js/bubbleText.js      Markup-Parser (Highlight-Tags), Satz-/Wortgrenzen
 js/idleWander.js      Watscheln, Bop, FACE_CAM, attending-Modus
-js/speechBubble.js    Canvas-Typewriter-Bubble, Billboard
+js/speechBubble.js    Canvas-Typewriter-Bubble mit Seiten, Billboard
 js/faceAnimator.js    Blinzeln + Mund-Sync
-js/activationAnim.js  Pop-In beim ersten Scan
-js/questionMenu.js    Onboarding + Fragen-Karussell (DOM)
+js/activationAnim.js  Pop-In beim ersten Scan, Einklappen beim Ausstieg
+js/questionMenu.js    Onboarding + Dialog-Menü: Themenkarten, Fragen mit Marken,
+                      Antwortoptionen, Weiter, Fußzeile (DOM, Karussell)
+js/portalView.js      Einblick (Portal/Galerie) — in v1 nicht aktiv
 js/debugOverlay.js    pinke Hilfslinien (?debug)
 cards/                ein .js pro Beruf (Inhalte, hartkodiert)
 assets/               Character-PNGs, Logos, Font, Kartenbild

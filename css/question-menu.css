@@ -510,3 +510,151 @@
   transform: translateY(0);
   opacity: 1;
 }
+
+/* ===========================================================================
+   DIALOGSYSTEM (2026-09-03) — Struktur im bestehenden Look. Das neue Design
+   kommt als eigener Schritt; bis dahin gelten die Variablen oben.
+   Neue Elemente: Themenkarten (Zähler), Marken neu/nochmal/link, Kopfzeile
+   [←] THEMA mit NEU-Punkt, Fußzeile (Ausstieg + Link), Weiter-Knopf,
+   Antwortoptionen, Ruhezustand, eingefrorenes Menü (Tracking verloren).
+   =========================================================================== */
+:root {
+  --q-badge-font-size: 14px;
+  --q-badge-new:       #39ff14;   /* neu freigeschaltet */
+  --q-badge-again:     #d9d4c9;   /* schon gefragt */
+  --q-badge-link:      #ffdd00;   /* führt nach außen */
+  --q-meta-font-size:  17px;
+  --q-asked-bg:        #efece4;   /* gedämpfte Box „schon gefragt" */
+  --q-asked-color:     #6e6a62;
+  --q-footer-font-size: 20px;
+  --q-back-size:       44px;
+  --q-frozen-opacity:  0.45;
+}
+
+/* Frage-Box: Label + Marken untereinander (Box ist ein Flex-Column) */
+.detar-q-btn { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.detar-q-label { display: block; }
+.detar-badges { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.detar-badge {
+  font-family: var(--q-font);
+  font-size: var(--q-badge-font-size);
+  line-height: 1;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--q-text-color);
+  border: 2px solid var(--q-outline);
+  border-radius: 20px;
+  padding: 3px 8px 2px;
+  white-space: nowrap;
+}
+.detar-badge--neu     { background: var(--q-badge-new); }
+.detar-badge--nochmal { background: var(--q-badge-again); }
+.detar-badge--link    { background: var(--q-badge-link); }
+
+/* Schon gefragt: gedämpft, bleibt wählbar */
+.detar-q-btn--asked { background: var(--q-asked-bg); color: var(--q-asked-color); }
+.detar-q-btn--asked.selected { background: var(--q-bg-selected); color: var(--q-text-color); }
+
+/* Themenkarte: Name + Zähler; „alle gefragt" gedämpft */
+.detar-q-btn--theme .detar-q-label { font-size: calc(var(--q-font-size) + 2px); }
+.detar-q-meta {
+  font-family: var(--q-font);
+  font-size: var(--q-meta-font-size);
+  line-height: 1;
+  opacity: 0.7;
+}
+.detar-q-btn--done { background: var(--q-asked-bg); color: var(--q-asked-color); }
+
+/* Antwortoption der Rückfrage: leicht anderer Grund, sonst Frage-Box */
+.detar-q-btn--option { background: #fff6b0; }
+
+/* Kopfzeile innerhalb eines Themas: [←] THEMA */
+.detar-themebar {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: var(--q-menu-pad-left);
+  margin-bottom: var(--q-title-gap);
+}
+.detar-title--inline { margin-left: 0; margin-bottom: 0; }
+.detar-back {
+  position: relative;
+  width: var(--q-back-size);
+  height: var(--q-back-size);
+  flex: 0 0 auto;
+  font-family: var(--q-font);
+  font-size: 26px;
+  line-height: 1;
+  color: var(--q-text-color);
+  background: var(--q-bg);
+  border: var(--q-border-width) solid var(--q-outline);
+  border-radius: 10px;
+  box-shadow: 0 4px 0 var(--q-outline);
+  cursor: pointer;
+  user-select: none;
+  pointer-events: auto;
+}
+.detar-back:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--q-outline); }
+/* NEU-Punkt: anderswo wartet eine freigeschaltete Frage */
+.detar-back--new::after {
+  content: "";
+  position: absolute;
+  top: -8px; right: -8px;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--q-badge-new);
+  border: 2px solid var(--q-outline);
+}
+
+/* Fußzeile: Ausstieg + Link, ruhig gesetzt (Text, kein farbiger Knopf) */
+.detar-footer {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin: -6px var(--q-menu-pad-left) 10px var(--q-menu-pad-left);
+}
+.detar-footer-btn {
+  font-family: var(--q-font);
+  font-size: var(--q-footer-font-size);
+  line-height: 1;
+  letter-spacing: var(--q-letter-spacing);
+  color: var(--q-title-color);
+  background: var(--q-title-bg);
+  border: 0;
+  border-radius: var(--q-title-radius);
+  padding: 7px 12px;
+  opacity: 0.8;
+  cursor: pointer;
+  user-select: none;
+  pointer-events: auto;
+}
+.detar-footer-btn--end { border: 2px dashed var(--q-title-color); background: transparent; }
+.detar-footer-btn:active { opacity: 1; transform: translateY(2px); }
+
+/* Weiter-Knopf: allein in der Reihe, Pfeil rechts */
+.detar-next-row {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  padding: var(--q-hub-space) var(--q-menu-pad-left);
+}
+.detar-q-btn--next {
+  flex: 0 1 auto;
+  min-width: 180px;
+  color: var(--q-title-color);
+  background: var(--q-title-bg);
+}
+.detar-q-btn--next.selected { color: var(--q-title-color); background: var(--q-title-bg); }
+
+/* Ruhezustand: Hinweis pulsiert */
+.detar-intro--idle { cursor: pointer; }
+.detar-intro-line--pulse { animation: detar-pulse 1.6s ease-in-out infinite; }
+@keyframes detar-pulse { 50% { opacity: 0.45; } }
+
+/* Tracking verloren: Menü steht, reagiert nicht */
+.detar-panel--frozen { opacity: var(--q-frozen-opacity); pointer-events: none; }
+.detar-panel--frozen * { pointer-events: none; }

@@ -278,3 +278,71 @@ body.launched .splash { display: none; }
   .card-name     { font-size: 32px; }
   .splash-kicker { font-size: 32px; }
 }
+
+/* --- Firmenname als Text, wenn die Karte kein Logo mitbringt ---------------- */
+.company-text {
+  font-family: var(--s-font);
+  font-size: 34px;
+  letter-spacing: 0.5px;
+  color: var(--s-outline);
+  background: #fff;
+  border: var(--s-border-width) solid var(--s-outline);
+  border-radius: 8px;
+  padding: 6px 16px;
+  line-height: 1;
+}
+.company-logo-box > img[hidden], .company-text[hidden] { display: none; }
+
+/* ============================================================================
+   KAMERA ABGELEHNT — eigener Bildschirm im Splash (body.camera-denied).
+   Dialogsystem 2026-09-03, UI-Inventar Abschnitt 6 „Zustände ohne Entwurf".
+   ============================================================================ */
+.perm-screen {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 32px 28px;
+  box-sizing: border-box;
+  background-color: var(--s-bg);
+  text-align: center;
+}
+body.camera-denied .perm-screen { display: flex; }
+.perm-title {
+  font-family: var(--s-font);
+  font-size: 34px;
+  line-height: 0.95;
+  color: var(--s-yellow);
+  background: var(--s-outline);
+  border-radius: 4px;
+  padding: 10px 16px;
+  margin: 0;
+}
+.perm-text {
+  font-family: var(--s-font);
+  font-size: 24px;
+  line-height: 1.05;
+  color: var(--s-text-light);
+  margin: 0;
+  max-width: 340px;
+}
+.perm-text--small { font-size: 19px; opacity: 0.7; }
+#permReload {
+  font-family: var(--s-font);
+  font-size: 30px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--s-outline);
+  background: var(--s-yellow);
+  border: var(--s-border-width) solid var(--s-outline);
+  border-radius: var(--s-radius);
+  box-shadow: 0 var(--s-shadow-depth) 0 var(--s-outline);
+  padding: 12px 40px;
+  margin-top: 8px;
+  cursor: pointer;
+}
+#permReload:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--s-outline); }

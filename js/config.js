@@ -22,7 +22,26 @@ export const TYPO = {
   offsetX: 0.14,
   offsetY: -0.3,
   msPerChar: 28,
+  // Dialogsystem (2026-09-03): Baseline-Lage im Zeilenraster (Anteil fontSize,
+  // alphabetic) + Highlight-Effekte im Sprechtext (Auszeichnung in der Karte:
+  // <marker> <gross> <leise> <knall>; welle/zittern werden nicht bewegt).
+  baselineRatio: 0.8,
+  fxMarkerColor: "#ffdd00", // <marker>: gelbe Schrift + Unterstrich; auch Seitenzähler
+  fxGrossScale: 1.16,       // <gross>: Schriftgröße × Faktor
+  fxLeiseAlpha: 0.62,       // <leise>: Deckkraft der Füllung
+  fxKnallMs: 260,           // <knall>: Dauer des Aufploppens je Zeichen
+  fxKnallScale: 1.7,        // <knall>: Start-Vergrößerung
 };
+
+// Emotion-Tags der Kartendatei → heute vorhandene Körper (idle/affirm/think).
+// Zwischenlösung (03.09.2026), bis der Rig die elf Posen liefert — dann
+// entfällt die Tabelle, der Tag wird direkt zum Posennamen.
+export const POSES = {
+  neutral: "idle", erklaeren: "idle", halten: "idle", zweihaendig: "idle",
+  winken: "affirm", bestaetigen: "affirm", stolz: "affirm", zeigen: "affirm",
+  denken: "think", schulterzucken: "think", erschoepft: "think",
+};
+export const poseFor = (tag) => POSES[tag] ?? "idle";
 
 // FaceAnimator → FACE
 export const FACE = {
@@ -61,6 +80,11 @@ export const CHOREO = {
   billboardLerp: 0.18,
   jumpDurationSec: 0.45, // Figur-Tap: Parabel-Hüpfer zur Kartenmitte
   jumpHeight: 0.04,
+  // Dialogsystem (2026-09-03)
+  continueDelayMs: 350,   // automatisches Weiter nach einer Antwort (kein Knopf)
+  collapseDelayMs: 900,   // Abschiedszeile steht so lange, bevor die Figur einklappt
+  collapseSec: 0.5,       // Dauer des Einklappens (Figur → Karte)
+  trackingLostMs: 1500,   // ab dieser Verlustdauer friert das Menü sichtbar ein
 };
 
 // Szene (Skalierung + Nick-Achse). cardWidth koppelt die Prototyp-Einheiten an

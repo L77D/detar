@@ -31,7 +31,7 @@
   <!-- Hinweis, wenn die Karte nach dem ersten Scan wieder verloren geht -->
   <div id="trackingHint"></div>
 
-  <!-- Bottom-UI: Onboarding-Instruktion, später das Fragen-Karussell -->
+  <!-- Bottom-UI: Onboarding-Instruktion, später das Dialog-Menü (Themen → Fragen) -->
   <div id="question-root"></div>
 
   <!-- Splash (liegt über allem, verschwindet mit body.launched) -->
@@ -46,7 +46,9 @@
       <div class="company">
         <span class="company-label">bei</span>
         <div class="company-logo-box">
-          <img src="./assets/logos/penny-logo.svg" alt="PENNY" />
+          <!-- Logo aus der Karte (card.companyLogo) oder Firmenname als Text -->
+          <img id="companyLogo" src="" alt="" />
+          <span id="companyText" class="company-text"></span>
         </div>
       </div>
     </div>
@@ -54,6 +56,16 @@
     <div class="splash-cta">
       <div id="errorBox"></div>
       <button id="launchButton" disabled>Start</button>
+    </div>
+
+    <!-- Kameraerlaubnis fehlt oder wurde abgelehnt: eigener Bildschirm ohne
+         Kamerabild (body.camera-denied), Dialogsystem 2026-09-03 -->
+    <div class="perm-screen" id="permScreen">
+      <p class="perm-title">Ohne Kamera geht's nicht</p>
+      <p class="perm-text">Die Figur steht nur auf der Karte, wenn die Kamera sie sehen darf.
+        Erlaube der Seite in den Browser-Einstellungen den Kamerazugriff und lade sie dann neu.</p>
+      <p class="perm-text perm-text--small">Das Kamerabild bleibt auf deinem Handy — es wird weder übertragen noch gespeichert.</p>
+      <button id="permReload">Neu laden</button>
     </div>
   </div>
 
