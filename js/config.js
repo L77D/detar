@@ -204,9 +204,9 @@ export const ACTFX = {
   color: "#fced62",    // Marker-Füllung (Figma-Gelb)
   outline: "#000000",  // Marker-Kontur
   outlineWidth: 4.44,  // Konturstärke in viewBox-Einheiten (32,59 = Marker-Kante)
-  // Lokal-Prototyp 2026-09-04 (Build-Skript setzt hopper="ja"): Handy-Icon
-  // springt aus dem Panel und hüpft auf der Kartenmitte, harter Pixel-Schatten.
-  hopper: "nein",
+  // Handy-Icon springt beim Erkennen aus dem Panel und hüpft auf der Karten-
+  // mitte (2026-09-04, seit Build 22 auch live — vorher nur Lokal-Prototyp).
+  hopper: "ja",
   iconHeight: 0.34,    // Icon-Höhe (Anteil Kartenbreite)
   hopHeight: 0.12,     // Sprunghöhe (Anteil Kartenbreite)
   hopSec: 0.32,        // Dauer eines Sprungs

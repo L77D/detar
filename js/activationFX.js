@@ -72,6 +72,9 @@ export class ActivationFX {
     this.hopShadow = null;
     this.hopState = "aus"; // aus | drop | squash | pause | hop
     this.hopT = 0;
+    // Textur VOR dem ersten Landen laden (sonst blitzt live kurz ein weißes
+    // Rechteck auf, bis das PNG vom Server da ist)
+    if (ACTFX.hopper === "ja") this.buildHopper();
   }
 
   buildHopper() {
@@ -79,6 +82,7 @@ export class ActivationFX {
       map: null, transparent: true, depthTest: false, depthWrite: false, side: THREE.DoubleSide,
     });
     this.hopIcon = new THREE.Mesh(new THREE.PlaneGeometry(ICON_ASPECT, 1), mkMat());
+    this.hopIcon.material.visible = false; // erst zeichnen, wenn die Textur da ist
     this.hopIcon.renderOrder = 0.6;
     // Schatten: kleines schwarzes Rechteck, 50 % Deckkraft, flach unter dem Icon
     this.hopShadow = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({
@@ -92,7 +96,7 @@ export class ActivationFX {
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.magFilter = tex.minFilter = THREE.NearestFilter;
       tex.generateMipmaps = false;
-      this.hopIcon.material.map = tex; this.hopIcon.material.needsUpdate = true;
+      this.hopIcon.material.map = tex; this.hopIcon.material.visible = true; this.hopIcon.material.needsUpdate = true;
     });
   }
 
