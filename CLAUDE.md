@@ -1,6 +1,6 @@
 # CLAUDE.md — DETAR WebAR
 
-Stand: 2026-09-03 · Build 18 (UI-Update) · Live: https://l77d.github.io/detar
+Stand: 2026-09-04 · Build 19 (UI-Update + Lokal-Prototyp-Build) · Live: https://l77d.github.io/detar
 
 ## Projekt
 
@@ -109,6 +109,13 @@ Vanilla ES-Module, GitHub Pages (served NUR `main`).
   Enthält aktuell KEINE STAB/GYRO/CAM-Blöcke → dort gelten die config-Defaults.
   Achtung Masking-Falle: Wert-Änderungen in config.js wirken nur, wenn der
   Block nicht in tuning.json steht.
+- **Lokal-Prototyp (Einzeldatei, Doppelklick, kein Server):**
+  `python3 tools/build-lokal-prototyp.py <Ziel.html>` packt die App in eine
+  HTML-Datei (Module als data:-URLs in der Import-Map, Assets/Fonts/tuning.json
+  eingebettet, Desktop-Modus + Dev-Panel erzwungen). Nach jedem Build neu
+  erzeugen; Ablage `…/Claude/Lokal-Prototyp/`. three.js kommt vom CDN, außer
+  `tools/vendor/three.module.js` + `OrbitControls.js` liegen bereit (offline).
+  Ersetzt `_Archiv/Lokal-Prototyp/DETAR_Lokal_Prototyp.html` (Juli-Stand).
 - Kommentare/Commits auf Deutsch, Commit-Trailer `Co-Authored-By: Claude`.
 - Änderungen an Tracking-Werten immer mit Datum + Begründung im Kommentar
   (Fix-Log lebt in den Code-Kommentaren).
