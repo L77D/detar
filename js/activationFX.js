@@ -19,6 +19,12 @@ import { ACTFX, SCENE } from "./config.js";
 const VB = 32.5934;
 const L_PATH = [[18.5188, 2.2219], [18.5188, 14.0744], [30.3713, 14.0744], [30.3713, 30.3713],
                 [2.2219, 30.3713], [2.2219, 2.2219]];
+// Lokal-Prototyp 2026-09-04 (ACTFX.hopper="ja"): Handy-Icon hüpft auf der
+// Kartenmitte — Icon-Sprite aufrecht (wie die Figur), Schatten als schwarze
+// Silhouette flach auf der Karte, beides NearestFilter (harte Pixelkanten).
+const ICON_URL = "./assets/ui/icon-handy/neutral.png";
+const ICON_ASPECT = 80 / 126;
+
 // Ecken im Karten-Frame (X rechts, Z zur Unterkante) + In-Plane-Drehung, damit
 // die Kerbe (im Bild oben rechts) zur Kartenmitte zeigt.
 const CORNERS = [
@@ -60,6 +66,87 @@ export class ActivationFX {
     });
     this.buildPool();
     this.applySizes();
+
+    // --- Hüpfendes Icon (nur ACTFX.hopper="ja", lazy) ----------------------------
+    this.hopIcon = null;
+    this.hopShadow = null;
+    this.hopState = "aus"; // aus | drop | squash | pause | hop
+    this.hopT = 0;
+  }
+
+  buildHopper() {
+    const mkMat = () => new THREE.MeshBasicMaterial({
+      map: null, transparent: true, depthTest: false, depthWrite: false, side: THREE.DoubleSide,
+    });
+    this.hopIcon = new THREE.Mesh(new THREE.PlaneGeometry(ICON_ASPECT, 1), mkMat());
+    this.hopIcon.renderOrder = 0.6;
+    // Schatten: kleines schwarzes Rechteck, 50 % Deckkraft, flach unter dem Icon
+    this.hopShadow = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({
+      color: 0x000000, transparent: true, opacity: 0.5, depthTest: false, depthWrite: false, side: THREE.DoubleSide,
+    }));
+    this.hopShadow.rotation.x = -Math.PI / 2;
+    this.hopShadow.renderOrder = 0.4;
+    this.hopIcon.visible = this.hopShadow.visible = false;
+    this.group.add(this.hopIcon, this.hopShadow);
+    new THREE.TextureLoader().load(ICON_URL, (tex) => {
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.magFilter = tex.minFilter = THREE.NearestFilter;
+      tex.generateMipmaps = false;
+      this.hopIcon.material.map = tex; this.hopIcon.material.needsUpdate = true;
+    });
+  }
+
+  /* Icon landet auf der Kartenmitte (nach dem Raussprung aus dem Panel). */
+  landIcon() {
+    if (ACTFX.hopper !== "ja" || this.state !== "attract") return;
+    if (!this.hopIcon) this.buildHopper();
+    this.hopState = "drop";
+    this.hopT = 0;
+    this.hopIcon.material.opacity = 1; this.hopShadow.material.opacity = 0.5;
+    this.hopIcon.visible = this.hopShadow.visible = true;
+    this.placeHopper(SCENE.cardWidth * ACTFX.dropHeight, 1);
+  }
+  /* y = Höhe über der Karte (Karten-Einheiten), squash = Y-Stauchung des Icons */
+  placeHopper(y, squash = 1) {
+    const w = SCENE.cardWidth;
+    const h = w * ACTFX.iconHeight;
+    this.hopIcon.scale.set(h * (2 - squash), h * squash, 1); // Geometrie hat bereits das Seitenverhältnis
+    this.hopIcon.position.set(0, h * squash / 2 + y, 0.004);
+    // Schatten: Rechteck direkt unter dem Icon, wird beim Sprung etwas kleiner
+    const k = Math.max(0.55, 1 - y / (w * ACTFX.hopHeight) * 0.35);
+    const iw = h * ICON_ASPECT;
+    this.hopShadow.scale.set(iw * ACTFX.shadowW * k, iw * ACTFX.shadowD * k, 1);
+    this.hopShadow.position.set(0, 0.0015, 0);
+  }
+  tickHopper(dt) {
+    if (this.hopState === "aus" || !this.hopIcon) return;
+    const w = SCENE.cardWidth;
+    this.hopT += dt;
+    if (this.state === "burst") { // mit den Markern verschwinden
+      const k = Math.min(1, this.burstT / Math.max(0.05, ACTFX.burstSec));
+      this.hopIcon.material.opacity = 1 - k; this.hopShadow.material.opacity = 0.5 * (1 - k);
+      return;
+    }
+    if (this.hopState === "drop") {
+      const t = Math.min(1, this.hopT / Math.max(0.05, ACTFX.dropSec));
+      this.placeHopper(w * ACTFX.dropHeight * (1 - t * t), 1);
+      if (t >= 1) { this.hopState = "squash"; this.hopT = 0; }
+    } else if (this.hopState === "squash") {
+      const t = Math.min(1, this.hopT / 0.14);
+      this.placeHopper(0, 1 - 0.22 * Math.sin(Math.PI * t));
+      if (t >= 1) { this.hopState = "pause"; this.hopT = 0; }
+    } else if (this.hopState === "pause") {
+      this.placeHopper(0, 1);
+      if (this.hopT >= ACTFX.hopPauseSec) { this.hopState = "hop"; this.hopT = 0; }
+    } else if (this.hopState === "hop") {
+      const t = Math.min(1, this.hopT / Math.max(0.05, ACTFX.hopSec));
+      this.placeHopper(w * ACTFX.hopHeight * Math.sin(Math.PI * t), 1 + 0.08 * Math.sin(Math.PI * t));
+      if (t >= 1) { this.hopState = "squash"; this.hopT = 0; }
+    }
+  }
+  hideHopper() {
+    this.hopState = "aus";
+    if (this.hopIcon) this.hopIcon.visible = this.hopShadow.visible = false;
   }
 
   /* Textur (neu) zeichnen — auch live über die Farb-Regler im Dev-Panel. */
@@ -121,6 +208,7 @@ export class ActivationFX {
   stop() {
     this.state = "idle";
     this.setVisible(false);
+    this.hideHopper();
   }
 
   tick(dt) {
@@ -143,6 +231,7 @@ export class ActivationFX {
       m.mesh.scale.set(s, s, 1);
       m.mesh.material.opacity = 1 - k;
     }
+    this.tickHopper(dt);
     if (this.state === "burst" && k >= 1) {
       const cb = this.onBurstDone;
       this.onBurstDone = null;

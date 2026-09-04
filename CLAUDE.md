@@ -1,6 +1,6 @@
 # CLAUDE.md — DETAR WebAR
 
-Stand: 2026-09-04 · Build 20 (UI-Update + Lokal-Prototyp offline) · Live: https://l77d.github.io/detar
+Stand: 2026-09-04 · Build 21 (UI-Update · Lokal-Prototyp mit Nur-Lokal-Experimenten) · Live: https://l77d.github.io/detar
 
 ## Projekt
 
@@ -116,6 +116,14 @@ Vanilla ES-Module, GitHub Pages (served NUR `main`).
   erzeugen; Ablage `…/Claude/Lokal-Prototyp/`. three.js kommt vom CDN, außer
   `tools/vendor/three.module.js` + `OrbitControls.js` liegen bereit (offline).
   Ersetzt `_Archiv/Lokal-Prototyp/DETAR_Lokal_Prototyp.html` (Juli-Stand).
+  **Nur-Lokal-Änderungen (Michael 2026-09-04, Live-App unverändert):** hängen
+  an `body.lokal` (CSS-Blöcke am Ende von `app.css`/`question-menu.css`) und
+  `ACTFX.hopper="ja"` (Build-Skript): Silkscreen −12 % Laufweite + Kasten-
+  Padding 8/4/6 · Splash-Raster driftet nach rechts oben · engeres Kachel-
+  raster (88/102 px Zeilen) · „Halte auf die Karte" als Laola-Welle
+  (`wave`-Spans in supportUI) · Karte gefunden: Icon springt aus dem Panel
+  (`IconHandy.jumpOut`) und hüpft in 3D auf der Kartenmitte mit flachem
+  Pixel-Schatten (`ActivationFX.landIcon/tickHopper`).
 - Kommentare/Commits auf Deutsch, Commit-Trailer `Co-Authored-By: Claude`.
 - Änderungen an Tracking-Werten immer mit Datum + Begründung im Kommentar
   (Fix-Log lebt in den Code-Kommentaren).

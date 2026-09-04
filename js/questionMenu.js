@@ -39,7 +39,7 @@ export class QuestionMenu {
     options: "Deine Antwort",
   };
   static LINES = {
-    suchen:   [{ text: "Halte auf die Karte" }],
+    suchen:   [{ text: "Halte auf die Karte", wave: true }], // wave wirkt nur mit body.lokal
     gefunden: [{ text: "Karte gefunden", kind: "gelb" }, { text: "→ Tipp sie an!", einzug: true }],
     ruhe:     [{ text: "Tipp auf die Karte", pulse: true }],
   };
@@ -70,6 +70,10 @@ export class QuestionMenu {
     if (this.revealed) return;
     this.phase = "attract";
     this.supportPanel("gefunden", QuestionMenu.LINES.gefunden);
+  }
+  /* Lokal-Prototyp: Icon der aktuellen Support-Zeile springt aus dem Bild. */
+  jumpIconOut(onDone) {
+    if (this.support?.icon) this.support.icon.jumpOut(onDone); else onDone?.();
   }
   /* Support ausblenden OHNE das Menü zu zeigen (zwischen Tap und fertig
      gesprochener Begrüßung). */

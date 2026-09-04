@@ -108,7 +108,11 @@ html = html.replace('  <link rel="stylesheet" href="./css/question-menu.css" />'
 html = re.sub(r'<script type="importmap">.*?</script>', lambda m: '<script type="importmap">' + json.dumps({"imports": imports}) + '</script>', html, flags=re.S)
 html = inline_literals(html)
 tuning = json.loads(read(os.path.join(ROOT, "tuning.json")))
-boot = ("<script>window.__LOKAL = true; window.__TUNING = %s; window.__ASSETS = %s; "
+# Nur-Lokal-Verhalten (2026-09-04): hüpfendes Icon auf der Karte; die CSS-
+# Änderungen (Silkscreen-Laufweite, Raster-Drift, Laola, enges Raster) hängen
+# an body.lokal — beides greift in der Live-App nicht.
+tuning.setdefault("ACTFX", {})["hopper"] = "ja"
+boot = ("<script>window.__LOKAL = true; document.body.classList.add('lokal'); window.__TUNING = %s; window.__ASSETS = %s; "
         "window.__asset = (p) => (window.__ASSETS[p] ?? p);</script>") % (json.dumps(tuning), json.dumps(assets))
 html = html.replace('<script type="module" src="./js/main.js"></script>',
                     boot + '\n  <script type="module">import "detar/js/main.js";</script>')

@@ -52,10 +52,18 @@ export class IconHandy {
     }, rand(2000, 5000));
   }
   destroy() { this.stop(); this.el.remove(); }
+  /* Lokal-Prototyp 2026-09-04: Icon springt links aus dem Bild (CSS-Bogen),
+     danach übernimmt die 3D-Version auf der Karte (activationFX.js). */
+  jumpOut(onDone) {
+    this.stop();
+    this.frame("neutral");
+    this.el.classList.add("support-icon--jump");
+    this.el.addEventListener("animationend", () => { this.el.style.visibility = "hidden"; onDone?.(); }, { once: true });
+  }
 }
 
 /* Support-Zeile: Icon + eine oder zwei Balken-Zeilen.
-   lines: [{ text, kind: "blau"|"gelb", einzug: bool, pulse: bool, md: bool }] */
+   lines: [{ text, kind: "blau"|"gelb", einzug: bool, pulse: bool, md: bool, wave: bool }] */
 export function buildSupport(mode, lines) {
   const wrap = document.createElement("div");
   wrap.className = "support";
@@ -70,7 +78,17 @@ export function buildSupport(mode, lines) {
       + (l.einzug ? " support-line--einzug" : "")
       + (l.pulse ? " support-line--pulse" : "")
       + (l.md ? " support-line--md" : "");
-    s.textContent = l.text;
+    if (l.wave) {
+      // Laola: jeder Buchstabe ein Span mit Laufindex (--i) für die Verzögerung
+      s.classList.add("support-line--wave");
+      [...l.text].forEach((ch, i) => {
+        const c = document.createElement("span");
+        c.className = "wave-ch";
+        c.style.setProperty("--i", i);
+        c.textContent = ch === " " ? "\u00a0" : ch;
+        s.appendChild(c);
+      });
+    } else s.textContent = l.text;
     col.appendChild(s);
   }
   wrap.appendChild(col);

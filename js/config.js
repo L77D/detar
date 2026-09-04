@@ -204,6 +204,17 @@ export const ACTFX = {
   color: "#fced62",    // Marker-Füllung (Figma-Gelb)
   outline: "#000000",  // Marker-Kontur
   outlineWidth: 4.44,  // Konturstärke in viewBox-Einheiten (32,59 = Marker-Kante)
+  // Lokal-Prototyp 2026-09-04 (Build-Skript setzt hopper="ja"): Handy-Icon
+  // springt aus dem Panel und hüpft auf der Kartenmitte, harter Pixel-Schatten.
+  hopper: "nein",
+  iconHeight: 0.34,    // Icon-Höhe (Anteil Kartenbreite)
+  hopHeight: 0.12,     // Sprunghöhe (Anteil Kartenbreite)
+  hopSec: 0.32,        // Dauer eines Sprungs
+  hopPauseSec: 0.9,    // Pause zwischen den Sprüngen
+  dropHeight: 0.6,     // Landeanflug: Starthöhe (Anteil Kartenbreite)
+  dropSec: 0.4,        // Dauer des Landeanflugs
+  shadowW: 1.0,        // Schatten-Rechteck: Breite (Anteil Icon-Breite), 50 % Deckkraft, direkt unter dem Icon
+  shadowD: 0.35,       // Schatten-Rechteck: Tiefe (Anteil Icon-Breite)
 };
 
 // Einblick-Modus (PortalView + FigureFlip, js/portalView.js): Portal-Parallax-

@@ -471,3 +471,59 @@ body.camera-denied .perm-screen { display: flex; }
   padding-top: 5px;
 }
 #permReload:active { transform: translate(-6px, 5px); box-shadow: -3px 3px 0 var(--d-schwarz); }
+
+/* ============================================================================
+   LOKAL-PROTOTYP (body.lokal) — Änderungen 2026-09-04 nur für die Einzeldatei
+   (tools/build-lokal-prototyp.py setzt die Klasse). Live-App unverändert.
+   ============================================================================ */
+/* Silkscreen: Laufweite −12 %, Zeilenhöhe 100 %; in Kästen Innenabstand
+   8 seitlich / 4 oben / 6 unten (Figma) */
+body.lokal .support-line,
+body.lokal .detar-title,
+body.lokal .splash-kicker,
+body.lokal .company-text,
+body.lokal .perm-text,
+body.lokal #errorBox {
+  letter-spacing: -0.12em;
+  line-height: 1;
+}
+body.lokal .support-line { padding: 4px 8px 6px; }
+body.lokal .detar-title  { padding: 4px 8px 6px; height: auto; }
+
+/* Splash-Raster wandert langsam nach rechts oben (eine Kachel je Umlauf → nahtlos) */
+@keyframes d-dots-drift {
+  from { -webkit-mask-position: 0 0, calc(var(--d-dot-gap) / 2) calc(var(--d-dot-gap) / 2);
+                 mask-position: 0 0, calc(var(--d-dot-gap) / 2) calc(var(--d-dot-gap) / 2); }
+  to   { -webkit-mask-position: var(--d-dot-gap) calc(-1 * var(--d-dot-gap)),
+                                calc(var(--d-dot-gap) * 1.5) calc(-0.5 * var(--d-dot-gap));
+                 mask-position: var(--d-dot-gap) calc(-1 * var(--d-dot-gap)),
+                                calc(var(--d-dot-gap) * 1.5) calc(-0.5 * var(--d-dot-gap)); }
+}
+body.lokal .splash.d-dots::before { animation: d-dots-drift 6s linear infinite; }
+
+/* „Halte auf die Karte": Buchstaben laufen als dezente Laola-Welle (3 px,
+   diskrete Schritte — 8-Bit-Rhythmus), Welle läuft einmal durch, dann Pause */
+@keyframes d-laola {
+  0%   { transform: translateY(0); }
+  5%   { transform: translateY(-3px); }
+  11%  { transform: translateY(0); }
+  100% { transform: translateY(0); }
+}
+body.lokal .support-line--wave .wave-ch {
+  display: inline-block;
+  animation: d-laola 1.6s steps(1, end) infinite;
+  animation-delay: calc(var(--i) * 65ms);
+}
+
+/* Karte gefunden: Icon springt links aus dem Bild (danach steht es in 3D auf
+   der Karte, siehe activationFX.js). Bogen in Pixelschritten. */
+@keyframes d-icon-jump-out {
+  0%   { transform: rotate(var(--d-icon-tilt)) translate(0, 0); }
+  30%  { transform: rotate(var(--d-icon-tilt)) translate(-40px, -50px); }
+  60%  { transform: rotate(var(--d-icon-tilt)) translate(-90px, -60px); }
+  100% { transform: rotate(var(--d-icon-tilt)) translate(-160px, 10px); opacity: 0; }
+}
+body.lokal .support-icon--jump { animation: d-icon-jump-out 0.55s steps(6, end) forwards; }
+@media (prefers-reduced-motion: reduce) {
+  body.lokal .splash.d-dots::before, body.lokal .wave-ch { animation: none; }
+}

@@ -259,3 +259,17 @@
     --q-grid-inset: 12px;
   }
 }
+
+/* ============================================================================
+   LOKAL-PROTOTYP (body.lokal) — engeres Raster wie mock_03/04 (2026-09-04):
+   Kacheln oben in der Zeile verankert, Textkasten nur so hoch wie der Text,
+   Zeilenraster 88 px (Themen) bzw. 102 px (Fragen), kein Zusatzabstand.
+   ============================================================================ */
+body.lokal .detar-cell { height: auto; align-items: flex-start; }
+body.lokal .detar-kachel { min-height: 0; padding: 4px 4px 2px; }
+body.lokal .detar-grid { grid-auto-rows: 88px; row-gap: 0; }
+body.lokal .detar-page { grid-auto-rows: 102px; row-gap: 0; }
+body.lokal .detar-pages { padding-top: 0; padding-bottom: 0; }
+body.lokal .detar-head { margin-bottom: 18px; }
+body.lokal .detar-reiter { margin-bottom: -2px; } /* 2026-09-04: Tick höher — Reiter schneidet die Outline nur noch leicht, nicht tief (Michael) */
+body.lokal .detar-panel { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
