@@ -1,6 +1,6 @@
 # CLAUDE.md — DETAR WebAR
 
-Stand: 2026-09-04 · Build 19 (UI-Update + Lokal-Prototyp-Build) · Live: https://l77d.github.io/detar
+Stand: 2026-09-04 · Build 20 (UI-Update + Lokal-Prototyp offline) · Live: https://l77d.github.io/detar
 
 ## Projekt
 
