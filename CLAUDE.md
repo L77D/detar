@@ -1,6 +1,6 @@
 # CLAUDE.md — DETAR WebAR
 
-Stand: 2026-09-07 · Build 24 (neues Tracking-Target 59×91 mm) · Live: https://l77d.github.io/detar
+Stand: 2026-09-07 · Build 25 (neues Tracking-Target 59×91 mm + Kartenbild) · Live: https://l77d.github.io/detar
 
 ## Projekt
 
@@ -90,9 +90,10 @@ Definition: `Dialogsystem/DETAR_Dialogsystem.md` im Projektordner; Prototyp
 
 **Tracking-Target (seit Build 23, 2026-09-07):** `targets/card.mind` =
 „DETAR Tracking-Check Juni 2026" (2910×4488 px, Aspekt 1,54 → `SCENE.cardAspect`).
-Vorgänger (PENNY-Demokarte 2199×3000) liegt in `targets/old/`. Das Desktop-
-Kartenbild `assets/card/detar_demokarte_0906.jpg` ist noch die alte Karte —
-im `?desktop`-Modus passt die Textur deshalb nicht zum neuen Seitenverhältnis.
+Vorgänger (PENNY-Demokarte 2199×3000) liegt in `targets/old/`. Desktop-
+Kartenbild: `assets/card/detar_demokarte_070926.jpg` (1200 px, ~400 KB,
+aus der 3-MB-Druckdatei `Assets/September/demo_skat_070926.jpg` verkleinert —
+dieselbe Vorlage wie das Target).
 Physische Karte: **59 × 91 mm hochkant** (Michael 2026-09-07) →
 `tuning.json → SCENE.cardWidth 0.059`. Der Wert skaliert nur die mm-Angaben
 in `?stats` (Jitter-Richtwerte unten gelten weiter in mm); die Figur ist

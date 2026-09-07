@@ -98,7 +98,7 @@ Datei löschen = zurück zu den Defaults.
 
 ## Tracking-Target (.mind) neu kompilieren
 
-Das Target ist aus `assets/card/detar_demokarte_0906.jpg` kompiliert. Bei
+Das Target ist aus dem Kartenbild kompiliert (Vorschau: `assets/card/detar_demokarte_070926.jpg`, 1200 px; Druckdatei 2910×4488 in `Assets/September/demo_skat_070926.jpg`). Bei
 neuem Karten-Layout:
 
 1. https://hiukim.github.io/mind-ar-js-doc/tools/compile/ öffnen

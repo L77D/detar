@@ -453,7 +453,7 @@ async function startDesktop() {
   controls.update();
 
   // Karte als Boden (nur Optik im Testmodus)
-  const tex = new THREE.TextureLoader().load("./assets/card/detar_demokarte_0906.jpg");
+  const tex = new THREE.TextureLoader().load("./assets/card/detar_demokarte_070926.jpg");
   tex.colorSpace = THREE.SRGBColorSpace;
   const cardAspect = 2048 / 1500;
   const cardMesh = new THREE.Mesh(
