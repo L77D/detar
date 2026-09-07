@@ -256,6 +256,8 @@ export class CardController {
   /* ---- Tracking verloren --------------------------------------------------- */
   onTrackingLost() {
     if (this.phase === "waiting" || this.phase === "attract") return;
+    // Ruhezustand: Panel-Zeile wechselt auf „Halte auf die Karte" (kein zweiter Hinweis)
+    if (this.phase === "resting" && this.menu.phase === "idle") this.menu.showIdle(true);
     if (this.lostTimer !== null) return;
     this.lostTimer = window.setTimeout(() => {
       this.lostTimer = null;
@@ -265,7 +267,10 @@ export class CardController {
   onTrackingFound() {
     if (this.lostTimer !== null) { clearTimeout(this.lostTimer); this.lostTimer = null; }
     this.menu.setFrozen(false);
+    if (this.phase === "resting" && this.menu.phase === "idle-lost") this.menu.showIdle(false);
   }
+  /* Karte-verloren-Hinweis mittig nur, wenn das Panel ihn nicht selbst trägt */
+  get lostHintWanted() { return this.greeted && this.phase !== "resting"; }
 
   /* ---- Posen / Lesezeit ---------------------------------------------------- */
   setPose(pose) {

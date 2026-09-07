@@ -42,6 +42,7 @@ export class QuestionMenu {
     suchen:   [{ text: "Halte auf die Karte", wave: true }], // wave wirkt nur mit body.lokal
     gefunden: [{ text: "Karte gefunden", kind: "gelb" }, { text: "→ Tipp sie an!", einzug: true }],
     ruhe:     [{ text: "Tipp auf die Karte", pulse: true }],
+    verloren: [{ text: "Halte auf die Karte" }], // Ruhezustand + Karte verloren
   };
 
   /* ---- Grundgerüst ------------------------------------------------------ */
@@ -247,8 +248,7 @@ export class QuestionMenu {
     const panel = this.panel(reveal ? "detar-panel--reveal" : "");
     const qs = this.engine.sortedQuestionsOf(themaId);
     const tiles = qs.map((q, i) => this.questionTile(q, i));
-    const exit = this.exitTile(tiles.length % 2 === 0 ? -2.34 : 2.34);
-    if (exit) tiles.push(exit);
+    // „Ich muss weiter" nur im Hauptmenü (Michael 2026-09-07), nicht in den Themen
     const dotEls = this.head(panel, {
       title: t?.label ?? "",
       back: () => this.hooks.onBack?.(),
@@ -276,10 +276,14 @@ export class QuestionMenu {
     btn.onclick = () => { if (this.frozen) return; sound.uiTap(); this.hooks.onNext?.(); };
     this.grid(panel, [btn]);
   }
-  /* Ruhezustand nach der Verabschiedung: Figur ist eingeklappt. */
-  showIdle() {
-    this.phase = "idle";
-    const s = this.supportPanel("ruhe", QuestionMenu.LINES.ruhe);
+  /* Ruhezustand nach der Verabschiedung: Figur ist eingeklappt.
+     lost = Karte gerade nicht im Bild: dann steht „Halte auf die Karte" HIER
+     im Panel (statt „Tipp auf die Karte" + Hinweis mittig — das Wichtigere
+     gehört in die UI-Fläche, Michael 2026-09-07). */
+  showIdle(lost = false) {
+    this.phase = lost ? "idle-lost" : "idle";
+    const s = this.supportPanel(lost ? "suchen" : "ruhe", lost ? QuestionMenu.LINES.verloren : QuestionMenu.LINES.ruhe);
+    if (lost) return;
     s.style.pointerEvents = "auto";
     s.style.cursor = "pointer";
     s.onclick = () => { if (this.frozen) return; this.hooks.onReentry?.(); };

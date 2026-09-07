@@ -145,7 +145,7 @@ html, body {
   margin: 8px 0 0 21px;
   transform: rotate(var(--d-icon-tilt));
   transform-origin: center;
-  filter: drop-shadow(-3px 3px 0 rgba(0, 0, 0, 0.45));
+  /* Schlagschatten entfernt (Michael 2026-09-07) */
 }
 .support-icon img {
   display: block;

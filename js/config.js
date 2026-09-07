@@ -100,6 +100,9 @@ export const SCENE = {
                            // 2910×4488 = 1,54, die PENNY-Demokarte 2199×3000 = 1,36).
                            // MindAR normiert die Kartenbreite auf 1; die Höhe (Eck-Marker,
                            // Lauffeld, Desktop-Plane) kommt aus diesem Wert.
+  figureScale: 0.85, // 2026-09-07 (Michael): gesamte AR-Szene auf ~85 % — Figur samt
+                     // Sprechblase (rig.js) und Hüpf-Icon (activationFX.js); die
+                     // Eck-Marker bleiben auf den Kartenecken, die sind Kartengeometrie.
   headNodAxis: 0.25, // Höhe der Kopf-Nick-Achse ÜBER dem HeadPivot (≈ Kopfmitte)
   bgColor: "#9a9a9a", // nur Desktop-Testmodus
   debug: false,       // pinke Debug-Overlays (auch per ?debug in der URL)

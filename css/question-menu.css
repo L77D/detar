@@ -48,7 +48,9 @@
   padding: 35px 0 calc(28px + env(safe-area-inset-bottom));
   pointer-events: auto;
 }
-.detar-panel.d-dots::before { z-index: 0; }
+/* Raster im Panel: Titelzeilen-Blau statt Gelb, beginnt erst 20 % unter der
+   Panel-Oberkante (Michael 2026-09-07) */
+.detar-panel.d-dots::before { z-index: 0; background-color: var(--d-blau); top: 20%; }
 /* Support-Phasen: Icon sitzt 8 px unter der Panel-Oberkante (mock_01/02) */
 .detar-panel--support { padding-top: 0; min-height: 235px; }
 .detar-panel--support .support { margin-top: 8px; }

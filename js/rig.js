@@ -43,7 +43,7 @@ export function buildRig(parent) {
 
   const FigureRoot = new THREE.Group();
   FigureRoot.position.set(0, 0.06241394743147513, 0);
-  FigureRoot.scale.setScalar(0.12759215518606418);
+  FigureRoot.scale.setScalar(0.12759215518606418 * (SCENE.figureScale ?? 1)); // Szene 85 % (2026-09-07)
   BeatRoot.add(FigureRoot);
 
   const BodyPivot = new THREE.Group();

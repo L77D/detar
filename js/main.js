@@ -400,9 +400,8 @@ async function startAR() {
   anchor.onTargetLost = () => {
     stab.onLost();
     if (controller.greeted) {
-      hint.classList.add("show");
-      lost.icon.setMode("suchen");
-      controller.onTrackingLost(); // nach CHOREO.trackingLostMs friert das Menü ein
+      if (controller.lostHintWanted) { hint.classList.add("show"); lost.icon.setMode("suchen"); }
+      controller.onTrackingLost(); // nach CHOREO.trackingLostMs friert das Menü ein; im Ruhezustand wechselt die Panel-Zeile
     }
   };
 

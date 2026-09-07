@@ -1,6 +1,6 @@
 # CLAUDE.md — DETAR WebAR
 
-Stand: 2026-09-07 · Build 26 (Target: beschnittene Demo-Karte 070926) · Live: https://l77d.github.io/detar
+Stand: 2026-09-07 · Build 27 (Szene 85 %, Panel-Raster blau, Ausstieg nur Hauptmenü) · Live: https://l77d.github.io/detar
 
 ## Projekt
 
@@ -45,6 +45,14 @@ Eck-Marker · Karte verloren = Menü eingefroren, nicht bedienbar.
   keinen ACTFX-Block).
 - Suchrahmen `#scanFrame` (weiße Ecken) über `body.scanning` — an nach dem
   Start, aus bei der ersten Erkennung.
+- **Build 27 (Michael 2026-09-07):** `SCENE.figureScale 0.85` skaliert Figur +
+  Sprechblase (rig.js) und Hüpf-Icon — Eck-Marker bleiben Kartengeometrie ·
+  Panel-Raster in Titelzeilen-Blau, beginnt 20 % unter der Panel-Oberkante
+  (Splash-Raster bleibt gelb) · Icon ohne Schlagschatten · „Ich muss weiter"
+  nur im Hauptmenü · Ruhezustand + Karte verloren: Panel-Zeile wechselt auf
+  „Halte auf die Karte" (`menu.showIdle(true)`, Phase `idle-lost`), der
+  mittige `#lostHint` erscheint nur außerhalb des Ruhezustands
+  (`controller.lostHintWanted`).
 - **Ohne Entwurf, abgeleitet** (Michael liefert später Mockups nach):
   Antwortoptionen, Weiter-Kachel, Ruhezustand, Kamera-abgelehnt, Firmenname-
   Text-Fallback im Splash, Seitenzähler, NEU-Punkt am Zurückpfeil.

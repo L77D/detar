@@ -113,7 +113,7 @@ export class ActivationFX {
   /* y = Höhe über der Karte (Karten-Einheiten), squash = Y-Stauchung des Icons */
   placeHopper(y, squash = 1) {
     const w = SCENE.cardWidth;
-    const h = w * ACTFX.iconHeight;
+    const h = w * ACTFX.iconHeight * (SCENE.figureScale ?? 1); // Szene 85 % wie die Figur
     this.hopIcon.scale.set(h * (2 - squash), h * squash, 1); // Geometrie hat bereits das Seitenverhältnis
     this.hopIcon.position.set(0, h * squash / 2 + y, 0.004);
     // Schatten: Rechteck direkt unter dem Icon, wird beim Sprung etwas kleiner
