@@ -31,6 +31,7 @@ export const TYPO = {
   fxLeiseAlpha: 0.62,       // <leise>: Deckkraft der Füllung
   fxKnallMs: 260,           // <knall>: Dauer des Aufploppens je Zeichen
   fxKnallScale: 1.7,        // <knall>: Start-Vergrößerung
+  pageLabel: "nein",        // Seitenzähler „1/3" in der Blase (Michael 2026-09-07: aus; Seiten + Weiter bleiben)
 };
 
 // Emotion-Tags der Kartendatei → heute vorhandene Körper (idle/affirm/think).

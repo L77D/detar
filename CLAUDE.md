@@ -1,6 +1,6 @@
 # CLAUDE.md — DETAR WebAR
 
-Stand: 2026-09-07 · Build 29 (Neu-Erkennung auf Tap) · Live: https://l77d.github.io/detar
+Stand: 2026-09-07 · Build 30 (Neu-Erkennung auf Tap, Seitenzähler aus) · Live: https://l77d.github.io/detar
 
 ## Projekt
 
@@ -76,8 +76,9 @@ Definition: `Dialogsystem/DETAR_Dialogsystem.md` im Projektordner; Prototyp
   `activation.playOut()` (Figur klappt ein) → Phase `resting` → Tap auf die
   Karte → Wiedereinstieg (beiläufige Zeile, Zustand bleibt).
 - `js/speechBubble.js` — `paginate()` schneidet am Satzende (Notfall Komma/
-  Gedankenstrich, dann Wortgrenze), gemessen am echten Font; Seitenzähler
-  oben rechts. Kein stilles Kappen mehr.
+  Gedankenstrich, dann Wortgrenze), gemessen am echten Font. Seitenzähler
+  „1/3" seit Build 30 aus (`TYPO.pageLabel: "nein"`, Michael 2026-09-07);
+  Seiten + Weiter-Kachel bleiben. Kein stilles Kappen mehr.
 - `js/bubbleText.js` — Markup-Parser, Satz-/Wortgrenzen.
 - `js/questionMenu.js` — Phasen: themen → thema ([←] Kopfzeile mit NEU-Punkt,
   Fragen mit Reitern NEU/LINK/✅) · options · next · idle; Optik siehe „UI".

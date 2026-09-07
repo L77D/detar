@@ -298,8 +298,8 @@ export class SpeechBubble {
     for (const o of ops) this.drawOp(ctx, o, now, true);
     for (const o of ops) this.drawOp(ctx, o, now, false);
 
-    // Seitenzähler über dem Block, rechts, klein
-    if (this.pageLabel) {
+    // Seitenzähler über dem Block, rechts, klein — seit 2026-09-07 per TYPO.pageLabel aus
+    if (this.pageLabel && TYPO.pageLabel !== "nein") {
       const small = Math.round(TYPO.fontSize * 0.55);
       ctx.font = `${TYPO.fontWeight} ${small}px ${TYPO.fontFamily}`;
       ctx.textAlign = "right";
