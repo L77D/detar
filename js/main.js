@@ -392,7 +392,7 @@ async function startAR() {
   // ?stats — Live-Diagnose am Gerät (Tracking/Gyro/Jitter in Zahlen)
   const stats = params.has("stats")
     ? new StatsOverlay(anchor.group, stabRoot, stab, gyro,
-        { getVideo: () => mindarThree.video, renderer }) // Kamera-Auflösung + PixelRatio anzeigen
+        { getVideo: () => mindarThree.video, renderer, card }) // Kamera-Auflösung + PixelRatio anzeigen
     : null;
 
   const exp = buildExperience({

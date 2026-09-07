@@ -1,6 +1,6 @@
 # CLAUDE.md — DETAR WebAR
 
-Stand: 2026-09-07 · Build 32 (Link zur Ausbildungsseite im Thema „Wie man reinkommt") · Live: https://l77d.github.io/detar
+Stand: 2026-09-07 · Build 33 (Link-Frage; ?stats zeigt geladene Karte) · Live: https://l77d.github.io/detar
 
 ## Projekt
 
@@ -224,7 +224,11 @@ Delta vor) als Prediction + Verlust-Brücke.
 - MindAR schätzt das Kamera-FOV nur (Quelle für systematisches Kipp-Wobble —
   siehe Strategie A3).
 - iOS: Gyro-Permission MUSS in der Start-Geste angefragt werden (vor allen
-  awaits); Safari cached JS aggressiv → Build-Check in ?stats nutzen.
+  awaits); Safari cached JS aggressiv → Build-Check in ?stats nutzen. Achtung:
+  Safari cached JEDE Datei einzeln (Pages: max-age 600) — `version.js` kann
+  frisch sein, während `cards/*.js` noch alt ist. `?stats` zeigt deshalb seit
+  Build 33 auch die geladene Karte (id, Fragenzahl, Link-Frage). Einzelne
+  Datei erzwingen: ihre URL direkt in Safari öffnen, dann die App neu laden.
 
 ## Referenzen
 
