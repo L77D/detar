@@ -55,6 +55,9 @@ export class PoseStabilizer {
     this.lastScale = new THREE.Vector3(1, 1, 1);
     this.scaleLock = 1;        // eingefrorene Anchor-Scale (#9) — beim Aufsetzen gesetzt
     this.hasScaleLock = false;
+    // Aufsetzen per Median (2026-09-07): Sammelpuffer der ersten Messungen
+    this.acq = null;           // { samples: [{p,q,s}], startMs, lastRaw }
+    this.outlierSinceMs = 0;   // seit wann die Scale am Stück außerhalb des Locks liegt
 
     // Tracking-Status (Lost-Hold)
     this.tracking = false;
@@ -105,6 +108,7 @@ export class PoseStabilizer {
     // war sie noch sichtbar (Lost-Hold/Gyro-Brücke), weich weiterkorrigieren.
     if (this.everVisible && !this.target.visible) {
       this.initialised = false;
+      this.acq = null; // frisch sammeln (Median), nicht alte Samples weiterverwenden
     }
     this.tracking = true;
     this.everVisible = true;
@@ -185,8 +189,19 @@ export class PoseStabilizer {
     // unbrauchbar.
     if (STAB.scaleLock !== "nein" && this.hasScaleLock) {
       if (Math.abs(_scale.x - this.scaleLock) / this.scaleLock > STAB.scaleOutlier) {
+        // RE-LOCK (2026-09-07): hält die Abweichung scaleRelockMs am Stück an, war
+        // der Lock selbst falsch (schlechter Aufsetz-Frame) → neu aufsetzen, mit
+        // Median über die nächsten Messungen. Einzelne Ausreißer weiter verwerfen.
+        if (!this.outlierSinceMs) this.outlierSinceMs = now;
+        else if (now - this.outlierSinceMs > STAB.scaleRelockMs) {
+          this.outlierSinceMs = 0;
+          this.initialised = false;
+          this.hasScaleLock = false;
+          this.acq = null;
+        }
         return; // Fehl-Messung (schräg/riesig) → komplett verwerfen
       }
+      this.outlierSinceMs = 0;
       _scale.setScalar(this.scaleLock);
     }
 
@@ -203,13 +218,18 @@ export class PoseStabilizer {
     // („mal schräg, mal doppelt so groß").
 
     if (!this.initialised) {
+      // AUFSETZEN PER MEDIAN (2026-09-07): erst Messungen sammeln; solange wird
+      // der laufende Median angezeigt. Liefert false, sobald der Median steht —
+      // dann liegen Median-Pose und -Scale in _pos/_quat/_scale.
+      if (this.acquire(_pos, _quat, _scale, now)) return;
       this.xPrev.copy(_pos);
       this.dxPrev.set(0, 0, 0);
       this.smoothPos.copy(_pos);
       this.smoothQuat.copy(_quat);
       this.lastScale.copy(_scale);
-      this.scaleLock = _scale.x; // Scale einfrieren (#9) — Aufsetz-Frame ist post-warmup
+      this.scaleLock = _scale.x; // Scale einfrieren (#9) — aus dem Median der Aufsetz-Messungen
       this.hasScaleLock = true;
+      this.outlierSinceMs = 0;
       this.measPos.copy(_pos);
       this.measQuat.copy(_quat);
       this.measT = now;
@@ -272,6 +292,49 @@ export class PoseStabilizer {
     }
 
     this.write();
+  }
+
+  /* Aufsetz-Sammler (2026-09-07): NEUE Messungen (Rohpose ändert sich) in den
+     Puffer, bis acquireFrames erreicht sind oder acquireMaxMs vergangen (min.
+     3 Messungen). Schreibt den laufenden Median in p/q/s. true = noch sammeln. */
+  acquire(p, q, s, now) {
+    if (!this.acq) this.acq = { samples: [], startMs: now, lastRaw: null };
+    const a = this.acq;
+    const isNew = !a.lastRaw || p.distanceTo(a.lastRaw.p) > 1e-6 || a.lastRaw.q.angleTo(q) > 1e-6;
+    if (isNew) {
+      a.samples.push({ p: p.clone(), q: q.clone(), s: s.x });
+      a.lastRaw = { p: p.clone(), q: q.clone() };
+    }
+    const n = a.samples.length;
+    const frames = Math.max(1, STAB.acquireFrames | 0);
+    const done = n >= frames || (n >= 3 && now - a.startMs > STAB.acquireMaxMs);
+    this.medianOf(a.samples, p, q, s);
+    if (done) { this.acq = null; return false; }
+    // Zwischenstand: laufender Median steht sichtbar auf der Karte
+    this.smoothPos.copy(p);
+    this.smoothQuat.copy(q);
+    this.lastScale.copy(s);
+    this.write();
+    return true;
+  }
+  /* Median je Positionsachse + Median-Scale; Rotation als MEDOID (die Messung
+     mit der kleinsten Winkelsumme zu allen anderen — kein Mitteln von
+     Quaternionen nötig, ein Ausreißer gewinnt nie). */
+  medianOf(samples, p, q, s) {
+    const med = (arr) => {
+      const a = arr.slice().sort((x, y) => x - y);
+      const m = a.length >> 1;
+      return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2;
+    };
+    p.set(med(samples.map((x) => x.p.x)), med(samples.map((x) => x.p.y)), med(samples.map((x) => x.p.z)));
+    s.setScalar(med(samples.map((x) => x.s)));
+    let best = 0, bestSum = Infinity;
+    for (let i = 0; i < samples.length; i++) {
+      let sum = 0;
+      for (let j = 0; j < samples.length; j++) if (i !== j) sum += samples[i].q.angleTo(samples[j].q);
+      if (sum < bestSum) { bestSum = sum; best = i; }
+    }
+    q.copy(samples[best].q);
   }
 
   /* Neue Vision-Messung erkennen (ROHPOSE unterscheidet sich von der letzten —
@@ -430,6 +493,8 @@ export class PoseStabilizer {
     this.vel.applyQuaternion(_dqInv);
     if (this.snapOld.ok) { this.snapOld.p.applyQuaternion(_dqInv); this.snapOld.q.premultiply(_dqInv); }
     if (this.snapNew.ok) { this.snapNew.p.applyQuaternion(_dqInv); this.snapNew.q.premultiply(_dqInv); }
+    // Aufsetz-Puffer mitdrehen, damit der Median bei Kameradrehung konsistent bleibt
+    if (this.acq) for (const x of this.acq.samples) { x.p.applyQuaternion(_dqInv); x.q.premultiply(_dqInv); }
   }
 
   oneEuro(targetV, out, dt, open) {

@@ -1,6 +1,6 @@
 # CLAUDE.md — DETAR WebAR
 
-Stand: 2026-09-07 · Build 27 (Szene 85 %, Panel-Raster blau, Ausstieg nur Hauptmenü) · Live: https://l77d.github.io/detar
+Stand: 2026-09-07 · Build 28 (Aufsetzen per Median + Scale-Re-Lock) · Live: https://l77d.github.io/detar
 
 ## Projekt
 
@@ -166,7 +166,11 @@ MindAR-Controller (Vision ~15–30 Hz)
 
 PoseStabilizer: Einheiten-Normierung auf Kartenbreiten → NaN-Guard →
 **Scale-Lock** (Scale strukturell konstant; >10 % Abweichung = Fehl-Homographie
-→ Frame verwerfen) → Bewegungs-Schätzung (250-ms-Drift-Fenster, tremor-fest) →
+→ Frame verwerfen; hält die Abweichung `scaleRelockMs` am Stück an → **Re-Lock**
+= komplett neu aufsetzen) → **Aufsetzen per Median** (Build 28: die ersten
+`acquireFrames` Messungen bzw. `acquireMaxMs` → Median je Achse, Medoid-
+Rotation, Median-Scale; solange läuft der laufende Median sichtbar mit — gilt
+für den ersten Scan, Re-Found und Snap) → Bewegungs-Schätzung (250-ms-Drift-Fenster, tremor-fest) →
 Far-Debounce (2 ferne Messungen → Snap) → Extrapolation (nur BEWEGT) →
 **One-Euro Position mit beta-GATE** (beta nur im BEWEGT-Modus; die Frame-
 Ableitung ist in Ruhe nie ~0 → ohne Gate stand der Filter permanent offen) →

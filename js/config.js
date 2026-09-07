@@ -170,6 +170,17 @@ export const STAB = {
   snapAngle: 0.5,       // Radiant (~29°); dito Rotation
   scaleOutlier: 0.1,    // relative Scale-Abweichung von der eingefrorenen Scale;
                         // darüber gilt der GANZE Frame als Fehl-Messung → verwerfen
+  // AUFSETZEN PER MEDIAN (2026-09-07, Michael: „initialer Scan sitzt schief"):
+  // Nicht der erste Frame prägt Pose + Scale-Lock, sondern der Median der
+  // ersten Messungen (Position je Achse, Medoid-Rotation, Median-Scale). Ein
+  // einzelner schräger/unscharfer Frame wird so überstimmt. Solange gesammelt
+  // wird, zeigt die Szene den laufenden Median (kein Warten ohne Bild).
+  acquireFrames: 10,    // so viele NEUE Vision-Messungen einsammeln
+  acquireMaxMs: 700,    // spätestens danach aufsetzen (bei langsamer Vision-Hz), min. 3 Messungen
+  // SCALE-RE-LOCK (2026-09-07): weicht die Scale so lange AM STÜCK um mehr als
+  // scaleOutlier vom Lock ab, war der Lock falsch → komplett neu aufsetzen
+  // (vorher wurden solche Frames endlos verworfen, die Figur blieb schief).
+  scaleRelockMs: 600,
 
   // Bewegungs-Extrapolation (2026-07-09): MindAR misst nur mit ~15–30 Hz —
   // zwischen zwei Messungen wird die Pose mit der zuletzt gemessenen
