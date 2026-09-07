@@ -94,7 +94,10 @@ export const CHOREO = {
 // Sprünge …) unverändert weiter.
 export const SCENE = {
   cardWidth: 0.17,
-  cardAspect: 2048 / 1500, // Höhe/Breite des Kartenbilds (bei neuem Layout anpassen)
+  cardAspect: 4488 / 2910, // Höhe/Breite des Tracking-Targets (2026-09-07: „DETAR Tracking-Check
+                           // Juni 2026", 2910×4488 px — vorher PENNY-Demokarte 2199×3000 = 1,36).
+                           // MindAR normiert die Kartenbreite auf 1; die Höhe (Eck-Marker,
+                           // Lauffeld, Desktop-Plane) kommt aus diesem Wert.
   headNodAxis: 0.25, // Höhe der Kopf-Nick-Achse ÜBER dem HeadPivot (≈ Kopfmitte)
   bgColor: "#9a9a9a", // nur Desktop-Testmodus
   debug: false,       // pinke Debug-Overlays (auch per ?debug in der URL)

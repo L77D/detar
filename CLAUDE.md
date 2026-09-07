@@ -1,6 +1,6 @@
 # CLAUDE.md — DETAR WebAR
 
-Stand: 2026-09-04 · Build 22 (UI-Update · Hüpf-Icon + Laola live) · Live: https://l77d.github.io/detar
+Stand: 2026-09-07 · Build 23 (neues Tracking-Target) · Live: https://l77d.github.io/detar
 
 ## Projekt
 
@@ -87,6 +87,14 @@ Definition: `Dialogsystem/DETAR_Dialogsystem.md` im Projektordner; Prototyp
   wird seit Build 18 nicht mehr angezeigt (DET-Label raus).
 - Build 16 ist vom ungemergten Branch `tracking-runde5` belegt (Patch in
   `patches/`), deshalb springt main von 15 auf 17.
+
+**Tracking-Target (seit Build 23, 2026-09-07):** `targets/card.mind` =
+„DETAR Tracking-Check Juni 2026" (2910×4488 px, Aspekt 1,54 → `SCENE.cardAspect`).
+Vorgänger (PENNY-Demokarte 2199×3000) liegt in `targets/old/`. Das Desktop-
+Kartenbild `assets/card/detar_demokarte_0906.jpg` ist noch die alte Karte —
+im `?desktop`-Modus passt die Textur deshalb nicht zum neuen Seitenverhältnis.
+Physische Kartenbreite (`tuning.json → SCENE.cardWidth 0.095 m`) nicht
+nachgemessen; sie skaliert nur die mm-Angaben in `?stats`.
 
 **Stack (GEPINNT, nicht bumpen):** `mind-ar@1.2.5` + `three@0.160` per
 CDN-Importmap (`index.html`) — mind-ar 1.2.5 ist gegen three 0.160 gebaut.
