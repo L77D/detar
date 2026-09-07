@@ -1,6 +1,6 @@
 # CLAUDE.md — DETAR WebAR
 
-Stand: 2026-09-07 · Build 31 (Link zur Ausbildungsseite im Thema „Wie man reinkommt") · Live: https://l77d.github.io/detar
+Stand: 2026-09-07 · Build 32 (Link zur Ausbildungsseite im Thema „Wie man reinkommt") · Live: https://l77d.github.io/detar
 
 ## Projekt
 

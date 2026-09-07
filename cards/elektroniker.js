@@ -162,7 +162,7 @@ export const card = {
        öffnen" in einem neuen Tab). Erscheint erst, nachdem die Figur bei
        „Wie bewirbt man sich?" auf die Seite verwiesen hat — dezent, im
        Kontext, nicht als Aufforderung. ------------------------------------- */
-    { id: "link", thema: "wege", label: "Zeig mir die Ausbildungsseite", tag: "zeigen", link: true,
+    { id: "link", thema: "wege", label: "Zeig mir die Seite", tag: "zeigen", link: true,
       url: "https://www.ausbildung.siemens.com/offer/elektroniker-w-m-d-fur-betriebstech/21edd4e8-bc72-47bd-8846-689054d2832e?showApplicationForm=false",
       text: "Ich mach dir die Seite auf. Da steht das Offizielle drin — Voraussetzungen, Ansprechpartner, alles Aktuelle." },
 
