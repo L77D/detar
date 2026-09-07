@@ -57,7 +57,7 @@
     "jumpHeight": 0.04
   },
   "SCENE": {
-    "cardWidth": 0.095,
+    "cardWidth": 0.059,
     "bgColor": "#9a9a9a",
     "headNodAxis": 0.25,
     "debug": false
