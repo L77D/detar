@@ -114,6 +114,7 @@ export class StatsOverlay {
       `Jitter roh:  ${f(this.raw.rms())}\n` +
       `Jitter stab: ${f(this.smooth.rms())}\n` +
       `Vision: ${this.stab.visionHz ?? "—"} Hz  ${this.stab.moving ? "BEWEGT" : "ruhig"}\n` +
+      `Roh↔Stab: ${(this.stab.rawSkewDeg ?? 0).toFixed(1)}°  ${((this.stab.rawOffset ?? 0) * 1000).toFixed(1)}‰KB  Re-Erk.: ${this.stab.relocCount ?? 0}\n` +
       `Build: ${build}`;
   }
 }

@@ -46,6 +46,11 @@ const DESKTOP_MODE = params.has("desktop");
 const DEBUG_MODE = params.has("debug");
 const DEV_MODE = params.has("dev");           // Tuning-Panel (Regler)
 const TIMELINE_MODE = params.has("timeline"); // Theatre.js-Studio (Keyframe-Editor)
+// NEU-ERKENNUNG auf Tap (2026-09-07): wird im AR-Modus gesetzt (startAR) —
+// MindAR neu erkennen lassen + PoseStabilizer per Median neu aufsetzen.
+// Aufrufer: Figur-Tap (Hüpfer kaschiert den Sprung) und Karten-Tap in der
+// „Karte gefunden"-Phase. Im Desktop-Modus null.
+let relocalize = null;
 
 const el = (id) => document.getElementById(id);
 let gyro = null; // GyroFusion — wird in der START-Geste angelegt (iOS-Permission)
@@ -224,7 +229,11 @@ function buildExperience({ renderer, scene, camera, worldRoot, isRunning, preTic
     // Aktivier-Phase + Ruhezustand: Tap auf die KARTE (unsichtbare Tap-Plane)
     // startet die Figur bzw. holt sie zurück (Wiedereinstieg).
     if (controller.phase === "attract" || controller.phase === "resting") {
-      if (_ray.intersectObject(fx.tapPlane, false).length > 0) controller.onCardTapped();
+      if (_ray.intersectObject(fx.tapPlane, false).length > 0) {
+        const wasAttract = controller.phase === "attract";
+        controller.onCardTapped();
+        if (wasAttract) relocalize?.(); // Nutzer hält still → beste Gelegenheit für eine saubere Pose
+      }
       return;
     }
     // Sprechblase: Schreibvorgang überspringen bzw. Weiter-Schritt auslösen
@@ -233,7 +242,7 @@ function buildExperience({ renderer, scene, camera, worldRoot, isRunning, preTic
     }
     if (controller.phase !== "live") return;
     const hits = _ray.intersectObjects(figureMeshes.filter((m) => m.visible), false);
-    if (hits.length > 0) startFigureJump();
+    if (hits.length > 0) { startFigureJump(); relocalize?.(); } // Hüpfer + „Geraderücken"
   }
   renderer.domElement.addEventListener("pointerdown", (e) => {
     _downX = e.clientX; _downY = e.clientY; _downT = performance.now();
@@ -360,6 +369,18 @@ async function startAR() {
   const stabRoot = new THREE.Group();
   scene.add(stabRoot);
   const stab = new PoseStabilizer(anchor.group, stabRoot, gyro);
+  // NEU-ERKENNUNG (2026-09-07, ohne Fork): MindARs Controller hält den Tracking-
+  // Zustand öffentlich in `trackingStates`. isTracking=false → die Verarbeitungs-
+  // schleife läuft im nächsten Frame durch Detect+Match (absolute Pose aus dem
+  // Feature-Matching) statt durch das relative Tracking, das Drift mitschleppt.
+  // Gelingt die Erkennung binnen missTolerance Frames, meldet MindAR kein
+  // „verloren"; die Rohpose wird einfach ersetzt. Der Stabilizer setzt danach
+  // per Median neu auf (reacquire), die alte Rohpose zählt dabei nicht mit.
+  relocalize = () => {
+    const ts = mindarThree.controller?.trackingStates?.[0];
+    if (ts) ts.isTracking = false;
+    stab.reacquire();
+  };
 
   // Karten-Frame unter dem stabRoot: X = rechts, Y = hoch von der Karte,
   // Z = zur Karten-Unterkante. (+90° X: Anchor-Z "aus dem Bild" wird zu Y.)

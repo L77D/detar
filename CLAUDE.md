@@ -1,6 +1,6 @@
 # CLAUDE.md — DETAR WebAR
 
-Stand: 2026-09-07 · Build 28 (Aufsetzen per Median + Scale-Re-Lock) · Live: https://l77d.github.io/detar
+Stand: 2026-09-07 · Build 29 (Neu-Erkennung auf Tap) · Live: https://l77d.github.io/detar
 
 ## Projekt
 
@@ -170,7 +170,12 @@ PoseStabilizer: Einheiten-Normierung auf Kartenbreiten → NaN-Guard →
 = komplett neu aufsetzen) → **Aufsetzen per Median** (Build 28: die ersten
 `acquireFrames` Messungen bzw. `acquireMaxMs` → Median je Achse, Medoid-
 Rotation, Median-Scale; solange läuft der laufende Median sichtbar mit — gilt
-für den ersten Scan, Re-Found und Snap) → Bewegungs-Schätzung (250-ms-Drift-Fenster, tremor-fest) →
+für den ersten Scan, Re-Found und Snap) → **Neu-Erkennung auf Tap** (Build 29:
+Figur-Tap und Karten-Tap in „Karte gefunden" setzen `controller.trackingStates[0]
+.isTracking = false` → MindAR läuft im nächsten Frame durch Detect+Match
+(absolute Pose, ohne Fork) und `stab.reacquire()` setzt per Median neu auf;
+`?stats` zeigt „Roh↔Stab" in Grad/‰-Kartenbreiten + Zahl der Re-Erkennungen —
+Roh≈Stab und trotzdem schief = Drift in MindAR, Roh≠Stab = wir halten alt) → Bewegungs-Schätzung (250-ms-Drift-Fenster, tremor-fest) →
 Far-Debounce (2 ferne Messungen → Snap) → Extrapolation (nur BEWEGT) →
 **One-Euro Position mit beta-GATE** (beta nur im BEWEGT-Modus; die Frame-
 Ableitung ist in Ruhe nie ~0 → ohne Gate stand der Filter permanent offen) →

@@ -56,8 +56,12 @@ export class PoseStabilizer {
     this.scaleLock = 1;        // eingefrorene Anchor-Scale (#9) — beim Aufsetzen gesetzt
     this.hasScaleLock = false;
     // Aufsetzen per Median (2026-09-07): Sammelpuffer der ersten Messungen
-    this.acq = null;           // { samples: [{p,q,s}], startMs, lastRaw }
+    this.acq = null;           // { samples: [{p,q,s}], startMs, lastRaw, skipCurrent }
     this.outlierSinceMs = 0;   // seit wann die Scale am Stück außerhalb des Locks liegt
+    // Diagnose (?stats): Abstand Rohpose ↔ geglätteter Zustand + Zahl der Neu-Erkennungen
+    this.rawSkewDeg = 0;
+    this.rawOffset = 0;
+    this.relocCount = 0;
 
     // Tracking-Status (Lost-Hold)
     this.tracking = false;
@@ -118,6 +122,18 @@ export class PoseStabilizer {
 
   onLost() {
     this.tracking = false;
+  }
+
+  /* NEU AUFSETZEN auf Nutzer-Tap (2026-09-07): main.js stößt parallel MindARs
+     Neu-Erkennung an. Die im Moment anstehende Rohpose ist noch die ALTE
+     (Erkennung braucht ein paar Frames) — sie zählt nicht als Messung
+     (skipCurrent); bis die erste frische Messung da ist, steht die alte Pose. */
+  reacquire() {
+    this.initialised = false;
+    this.hasScaleLock = false;
+    this.outlierSinceMs = 0;
+    this.acq = { samples: [], startMs: performance.now(), lastRaw: null, skipCurrent: true };
+    this.relocCount++;
   }
 
   tick() {
@@ -250,6 +266,9 @@ export class PoseStabilizer {
       return;
     }
     this.lastScale.copy(_scale);
+    // Diagnose: wie weit liegt die Rohpose vom geglätteten Zustand (Kartenbreiten / Grad)?
+    this.rawSkewDeg = (_quat.angleTo(this.smoothQuat) * 180) / Math.PI;
+    this.rawOffset = _pos.distanceTo(this.smoothPos);
 
     // --- Bewegungs-Extrapolation (2026-07-09) -----------------------------------
     // MindAR misst nur mit ~15–30 Hz; dazwischen wiederholt der Anchor die
@@ -298,14 +317,16 @@ export class PoseStabilizer {
      Puffer, bis acquireFrames erreicht sind oder acquireMaxMs vergangen (min.
      3 Messungen). Schreibt den laufenden Median in p/q/s. true = noch sammeln. */
   acquire(p, q, s, now) {
-    if (!this.acq) this.acq = { samples: [], startMs: now, lastRaw: null };
+    if (!this.acq) this.acq = { samples: [], startMs: now, lastRaw: null, skipCurrent: false };
     const a = this.acq;
     const isNew = !a.lastRaw || p.distanceTo(a.lastRaw.p) > 1e-6 || a.lastRaw.q.angleTo(q) > 1e-6;
     if (isNew) {
-      a.samples.push({ p: p.clone(), q: q.clone(), s: s.x });
+      if (a.skipCurrent) a.skipCurrent = false; // alte Rohpose beim Re-Tap überspringen
+      else a.samples.push({ p: p.clone(), q: q.clone(), s: s.x });
       a.lastRaw = { p: p.clone(), q: q.clone() };
     }
     const n = a.samples.length;
+    if (n === 0) { this.write(); return true; } // noch keine frische Messung → alte Pose halten
     const frames = Math.max(1, STAB.acquireFrames | 0);
     const done = n >= frames || (n >= 3 && now - a.startMs > STAB.acquireMaxMs);
     this.medianOf(a.samples, p, q, s);
