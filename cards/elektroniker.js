@@ -21,14 +21,17 @@ export const card = {
   company: "Siemens",
   companyLogo: null,   // kein Logo → Firmenname als Text im Splash
   npc: "Jonas · 2. Lehrjahr",
-  // Link hinter dem DEIN-ERSTER-TAG-Label oben links (neuer Tab)
-  jobUrl: "https://www.ausbildung.siemens.com/offer/elektroniker-w-m-d-fur-betriebstech/21edd4e8-bc72-47bd-8846-689054d2832e",
+  // Ausbildungsseite (seit Build 18 kein DET-Label mehr; der Link läuft über die
+  // Frage „link" im Thema „Wie man reinkommt", siehe unten)
+  jobUrl: "https://www.ausbildung.siemens.com/offer/elektroniker-w-m-d-fur-betriebstech/21edd4e8-bc72-47bd-8846-689054d2832e?showApplicationForm=false",
   idleReturnMs: 8000,
 
   /* Themen sind über ALLE Karten identisch — dadurch kostet die Ebene inhaltlich
      fast nichts und der Schüler erkennt sie von Karte zu Karte wieder.
-     Jede Frage trägt genau ein `thema`; Ausstieg und Link gehören zu keinem und
-     stehen dauerhaft in der Fußzeile beider Ebenen. */
+     Jede Frage trägt genau ein `thema`; der Ausstieg gehört zu keinem und steht
+     als Kachel im Hauptmenü. Der Link zur Ausbildungsseite ist seit 2026-09-07
+     eine normale Frage im Thema „Wie man reinkommt", freigeschaltet durch
+     „Wie bewirbt man sich?" (die Figur verweist dort auf die Seite). */
   themen: [
     { id: "alltag", label: "Alltag im Job" },
     { id: "beruf",  label: "Was der Beruf bringt" },
@@ -37,7 +40,7 @@ export const card = {
 
   /* Von Anfang an sichtbar — je Thema genau eine offene Frage zum Start,
      damit keine Themenkarte leer wirkt. */
-  initial: ["was", "koennen", "jetzt_tun", "ende", "link"],
+  initial: ["was", "koennen", "jetzt_tun", "ende"],
 
   greeting: {
     tag: "winken",
@@ -140,7 +143,8 @@ export const card = {
       unlocks: ["bewerbung", "praktikum_wie"] },
 
     { id: "bewerbung", thema: "wege", label: "Wie bewirbt man sich?", tag: "zeigen",
-      text: "Online, über die Ausbildungsseite des Betriebs. Dort steht, welche Unterlagen gebraucht werden und wann welche Jahrgänge starten — das ändert sich, deshalb guckst du das besser direkt dort nach." },
+      text: "Online, über die Ausbildungsseite des Betriebs. Dort steht, welche Unterlagen gebraucht werden und wann welche Jahrgänge starten — das ändert sich, deshalb guckst du das besser direkt dort nach.",
+      unlocks: ["link"] },
 
     { id: "jetzt_tun", thema: "wege", label: "Was sollte ich jetzt schon tun?", tag: "erklaeren",
       text: "Ehrlich? Ein Praktikum. Zwei Wochen in einer Werkstatt sagen dir mehr als jede Broschüre. Und guck dir in Physik den Teil mit Strom und Spannung genauer an, den brauchst du wirklich.",
@@ -154,12 +158,15 @@ export const card = {
     { id: "praktikum_was", thema: "wege", label: "Und was bringt mir das?", tag: "stolz",
       text: "In zwei Wochen siehst du den Alltag: wie laut es ist, wie schnell gearbeitet wird, wie die Leute miteinander reden. Selber machen darfst du wenig, aber du merkst ziemlich schnell, ob dich das anzieht oder nervt. Ich hab so gemerkt, dass ich das <welle>will</welle>." },
 
-    /* --- externer Link (dauerhafte Fußzeile) ------------------------------ */
-    { id: "link", label: "Alles Offizielle zum Beruf", tag: "zeigen", link: true,
-      url: "https://www.ausbildung.siemens.com/offer/elektroniker-w-m-d-fur-betriebstech/21edd4e8-bc72-47bd-8846-689054d2832e",
+    /* --- externer Link: Ausbildungsseite (Reiter LINK, öffnet nach „Seite
+       öffnen" in einem neuen Tab). Erscheint erst, nachdem die Figur bei
+       „Wie bewirbt man sich?" auf die Seite verwiesen hat — dezent, im
+       Kontext, nicht als Aufforderung. ------------------------------------- */
+    { id: "link", thema: "wege", label: "Zeig mir die Ausbildungsseite", tag: "zeigen", link: true,
+      url: "https://www.ausbildung.siemens.com/offer/elektroniker-w-m-d-fur-betriebstech/21edd4e8-bc72-47bd-8846-689054d2832e?showApplicationForm=false",
       text: "Ich mach dir die Seite auf. Da steht das Offizielle drin — Voraussetzungen, Ansprechpartner, alles Aktuelle." },
 
-    /* --- Ausstieg (dauerhafte Fußzeile) ----------------------------------- */
+    /* --- Ausstieg (Kachel im Hauptmenü) ----------------------------------- */
     { id: "ende", label: "Ich muss weiter", tag: "winken", end: true,
       text: "Alles klar. Mach's gut — und viel Erfolg bei dem, was du dann machst!" },
   ],

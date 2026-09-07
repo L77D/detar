@@ -1,6 +1,6 @@
 # CLAUDE.md — DETAR WebAR
 
-Stand: 2026-09-07 · Build 30 (Neu-Erkennung auf Tap, Seitenzähler aus) · Live: https://l77d.github.io/detar
+Stand: 2026-09-07 · Build 31 (Link zur Ausbildungsseite im Thema „Wie man reinkommt") · Live: https://l77d.github.io/detar
 
 ## Projekt
 
@@ -82,8 +82,10 @@ Definition: `Dialogsystem/DETAR_Dialogsystem.md` im Projektordner; Prototyp
 - `js/bubbleText.js` — Markup-Parser, Satz-/Wortgrenzen.
 - `js/questionMenu.js` — Phasen: themen → thema ([←] Kopfzeile mit NEU-Punkt,
   Fragen mit Reitern NEU/LINK/✅) · options · next · idle; Optik siehe „UI".
-  Ausstieg als Kachel (`engine.exitQuestion()`), Link-Frage wird nicht
-  angezeigt (`permaQuestions()` bleibt für später).
+  Ausstieg als Kachel (`engine.exitQuestion()`). Link-Frage „link" ist seit
+  Build 31 eine normale Frage im Thema `wege` (Reiter LINK, „Seite öffnen" →
+  neuer Tab), freigeschaltet durch „bewerbung"; `permaQuestions()` bleibt
+  ungenutzt.
 - `config.js → POSES`: Emotion-Tag → Körper (idle/affirm/think), bis der Rig
   die elf Posen liefert. `CHOREO`: continueDelayMs, collapseDelayMs,
   collapseSec, trackingLostMs (Menü friert nach Verlust ein).
