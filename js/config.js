@@ -95,8 +95,9 @@ export const CHOREO = {
 export const SCENE = {
   cardWidth: 0.17,   // wird von tuning.json überschrieben: 0.059 m = echte Kartenbreite
                      // (Karte 59×91 mm hochkant, Michael 2026-09-07; vorher 0.095)
-  cardAspect: 4488 / 2910, // Höhe/Breite des Tracking-Targets (2026-09-07: „DETAR Tracking-Check
-                           // Juni 2026", 2910×4488 px — vorher PENNY-Demokarte 2199×3000 = 1,36).
+  cardAspect: 2156 / 1346, // Höhe/Breite des Tracking-Targets (2026-09-07, 2. Fassung: beschnittene
+                           // Demo-Karte 070926 ohne Rand, 1346×2156 px = 1,60; die Vollkarte war
+                           // 2910×4488 = 1,54, die PENNY-Demokarte 2199×3000 = 1,36).
                            // MindAR normiert die Kartenbreite auf 1; die Höhe (Eck-Marker,
                            // Lauffeld, Desktop-Plane) kommt aus diesem Wert.
   headNodAxis: 0.25, // Höhe der Kopf-Nick-Achse ÜBER dem HeadPivot (≈ Kopfmitte)

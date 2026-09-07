@@ -1,6 +1,6 @@
 # CLAUDE.md — DETAR WebAR
 
-Stand: 2026-09-07 · Build 25 (neues Tracking-Target 59×91 mm + Kartenbild) · Live: https://l77d.github.io/detar
+Stand: 2026-09-07 · Build 26 (Target: beschnittene Demo-Karte 070926) · Live: https://l77d.github.io/detar
 
 ## Projekt
 
@@ -88,9 +88,15 @@ Definition: `Dialogsystem/DETAR_Dialogsystem.md` im Projektordner; Prototyp
 - Build 16 ist vom ungemergten Branch `tracking-runde5` belegt (Patch in
   `patches/`), deshalb springt main von 15 auf 17.
 
-**Tracking-Target (seit Build 23, 2026-09-07):** `targets/card.mind` =
-„DETAR Tracking-Check Juni 2026" (2910×4488 px, Aspekt 1,54 → `SCENE.cardAspect`).
-Vorgänger (PENNY-Demokarte 2199×3000) liegt in `targets/old/`. Desktop-
+**Tracking-Target (seit Build 26, 2026-09-07):** `targets/card.mind` = beschnittene
+Demo-Karte 070926 (`Assets/September/demo_skat_070926_mind_cropped.png`,
+1346×2156 px, Aspekt 1,60 → `SCENE.cardAspect`), kompiliert mit dem Compiler
+aus `mind-ar@1.2.5` (Skript in der Session: Seite mit `Compiler.compileImageTargets`
+in headless Chrome — im versteckten Browser-Pane stallt tfjs, weil rAF pausiert).
+Vorgänger in `targets/old/`: Vollkarte „DETAR Tracking-Check Juni 2026"
+(2910×4488, 1,54) und PENNY-Demokarte (2199×3000, 1,36). Weil das Target
+beschnitten ist, ist seine physische Breite etwas kleiner als die 59 mm der
+Karte — `cardWidth 0.059` bleibt als Näherung (wirkt nur auf mm in `?stats`). Desktop-
 Kartenbild: `assets/card/detar_demokarte_070926.jpg` (1200 px, ~400 KB,
 aus der 3-MB-Druckdatei `Assets/September/demo_skat_070926.jpg` verkleinert —
 dieselbe Vorlage wie das Target).
