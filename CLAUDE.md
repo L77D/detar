@@ -1,6 +1,6 @@
 # CLAUDE.md — DETAR WebAR
 
-Stand: 2026-09-09 · Build 48 (Branch `8thwall-image-targets`: Tracking auf 8th Wall, Engine eingecheckt) · Live (main, Build 33, MindAR): https://l77d.github.io/detar
+Stand: 2026-09-09 · Build 49 (Branch `v2tracker-lean`: Tracking auf 8th Wall + Entschlackung) · Live (main, Build 33, MindAR): https://l77d.github.io/detar
 
 ## Projekt
 
@@ -128,12 +128,13 @@ gebaut, nicht bumpen). Vanilla ES-Module, GitHub Pages (served NUR `main`).
 ## Branches
 
 - `main` — live (Pages deployt automatisch)
-- `8thwall-image-targets` — Tracking auf 8th Wall Image Targets (Open-Source-
-  Engine, selbst gehostet). Nicht gemerged. **Testdeployment:** Spiegel-Repo
-  `L77D/v2tracker` (Branch → dessen `main`) → https://l77d.github.io/v2tracker/
-  — nach jedem Push auf den Branch nachziehen:
-  `git push <v2tracker-remote> 8thwall-image-targets:main`. Gerätetest per
-  `?stats`; Build-Check dort vergleicht gegen die eigene version.js.
+- `v2tracker-lean` — auf `8thwall-image-targets` aufgesetzt: Entschlackung
+  (2026-09-09, Michael am Handy: Tracker „deutlich besser als MindAR"). Das ist
+  der Stand für den Merge. **Testdeployment:** Spiegel-Repo `L77D/v2tracker`
+  (Branch → dessen `main`) → https://l77d.github.io/v2tracker/ — nach jedem
+  Push nachziehen: `git push <v2tracker-remote> v2tracker-lean:main`.
+- `8thwall-image-targets` — Tracking auf 8th Wall Image Targets, Stand vor der
+  Entschlackung (Build 48). Bleibt als Referenz.
 - `pruefstand` — Strategie E: `?record` / `?replay` / `?metrics`
   (Session-Aufnahme am Gerät, Replay + Vergleichszahlen am Desktop).
   Noch nicht gemerged; `?record` braucht HTTPS = erst nach Merge am Handy nutzbar.
@@ -144,10 +145,17 @@ gebaut, nicht bumpen). Vanilla ES-Module, GitHub Pages (served NUR `main`).
   (`git rev-list --count HEAD` des neuen Commits). **Bei JEDEM Push auf main
   hochzählen.** `?stats` zeigt den laufenden Build und prüft per
   no-store-Fetch gegen den live-Stand („neu laden!" bei altem Cache).
-- **tuning.json** (Repo-Root) überschreibt `js/config.js`-Defaults beim Laden.
-  Enthält aktuell KEINE STAB/GYRO/CAM-Blöcke → dort gelten die config-Defaults.
-  Achtung Masking-Falle: Wert-Änderungen in config.js wirken nur, wenn der
-  Block nicht in tuning.json steht.
+- **Keine tuning.json mehr im Repo** (seit 2026-09-09, Branch v2tracker-lean):
+  alle Werte sind Defaults in `js/config.js` (EINE Quelle). Eine tuning.json
+  wird nur mit `?dev`/`?tuning` geholt — Tuning-Werkzeug, nie einchecken
+  (sonst wieder die Masking-Falle: config-Änderungen wirken nicht, wenn der
+  Block in tuning.json steht).
+- **Schlank-Regeln (v2tracker-lean):** Dev-Module (`debugOverlay`, `statsOverlay`,
+  `devPanel`, `timeline`, `desktopMode`+`phoneFrame`) NUR per URL-Flag laden;
+  keine CDN-Requests (three.js aus `vendor/three/`, neue THREE.*-Klasse →
+  `tools/three-slim-entry.js` + `tools/build-three.sh`); Engine-Kern ohne
+  Framework-Adapter (`vendor/8thwall/BUILD-INFO.txt`); keine toten Assets
+  (Einblick/Portal, MindAR-Targets, Lokal-Vendor sind raus).
 - **Lokal-Prototyp (Einzeldatei, Doppelklick, kein Server):**
   `python3 tools/build-lokal-prototyp.py <Ziel.html>` packt die App in eine
   HTML-Datei (Module als data:-URLs in der Import-Map, Assets/Fonts/tuning.json

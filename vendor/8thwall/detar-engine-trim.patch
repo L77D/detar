@@ -1,0 +1,105 @@
+diff --git a/reality/app/xr/js/src/jsxr.ts b/reality/app/xr/js/src/jsxr.ts
+index ecca309..99959d2 100644
+--- a/reality/app/xr/js/src/jsxr.ts
++++ b/reality/app/xr/js/src/jsxr.ts
+@@ -12,24 +12,12 @@ import {objectUrl} from 'reality/app/xr/js/xr-js-asm.blob-worker'
+ import type {XrccModule} from 'reality/app/xr/js/src/types/xrcc'
+ 
+ import {JSDevice, XrDeviceFactory, getCompatibility} from './js-device'
+-import {CanvasScreenshotFactory} from './canvas-screenshot'
+ import {CameraLoop} from './camera-loop'
+-import {CameraPixelArray} from './camera-providers'
+-import {LayersControllerFactory} from './layers-controller'
+-import {FullWindowCanvasFactory} from './full-window-canvas'
+-import {GLRenderer, GlTextureRenderer} from './gl-renderer'
+-import {Sumerian} from './xr-sumerian'
++import {GlTextureRenderer} from './gl-renderer'
+ import {ThreejsFactory} from './threejs-renderer'
+-import {CloudStudioThreejsFactory} from './cloudstudio-threejs-renderer'
+-import {AFrameFactory, registerAFrameXrComponent, registerAFrameXrPrimitive} from './xr-aframe'
+-import {BabylonjsFactory} from './xr-babylonjs'
+-import {PlayCanvasFactory} from './xr-playcanvas'
+ import {XrPermissionsFactory} from './permissions'
+ import {XrConfigFactory} from './config'
+ import {setRenameDeprecation, setRemovalDeprecation, setNoopDeprecation} from './deprecate'
+-import {WorldPointsRendererModule} from './worldpoint-renderer'
+-import {MediaRecorderFactory} from './media-recorder'
+-import {YuvPixelsArray} from './yuv-pixels-array'
+ import {
+   UaResult,
+   getDeviceInfoBytes, getFixedUAResultWithClientHints,
+@@ -225,24 +213,16 @@ const loadJsxr = async () => {
+     },
+ 
+     // Core functionality pipeline modules.
+-    CanvasScreenshot: CanvasScreenshotFactory(),  // detachable
+-    MediaRecorder: MediaRecorderFactory(),        // detachable
+-    YuvPixelsArray,                               // detachable
+-    CameraPixelArray,                             // detachable
++    // DETAR-Zuschnitt (2026-09-09): CanvasScreenshot, MediaRecorder, YuvPixelsArray,
++    // CameraPixelArray, LayersController (Sky/Semantik), AFrame, Babylonjs,
++    // PlayCanvas, Sumerian und CloudStudioThreejs entfernt — nur three.js +
++    // Bildtracking werden gebraucht.
+     GlTextureRenderer,                            // detachable
+     FaceController: null,                         // detachable
+-    LayersController: LayersControllerFactory(runConfig,
+-      loop.xrccWithContextPromise),               // detachable
+     XrController: null,                           // detachable
+ 
+     // Rendering system pipeline modules.
+-    AFrame: AFrameFactory(loop.xrccWithContextPromise),  // detachable
+-    Babylonjs: BabylonjsFactory(),                       // detachable
+-    PlayCanvas: PlayCanvasFactory(),                     // not detachable
+-    Sumerian,                                            // not detachable
+     Threejs: ThreejsFactory(),                           // detachable
+-    // detachable
+-    CloudStudioThreejs: CloudStudioThreejsFactory(),
+ 
+     // Static utilities that are no modules.
+     XrConfig: XrConfigFactory(),            // no pipeline
+@@ -272,26 +252,7 @@ const loadJsxr = async () => {
+     drawTexForComputeTex: loop.drawTexForComputeTex,
+   }
+ 
+-  // If AFrame javascript is loaded before us, automatically register the component. This allows
+-  // it to be embedded directly into the html body.  If we can't load aframe before jsxr, then
+-  // the register method is provided as an explicit call.
+-  const registerAFrame = () => {
+-    registerAFrameXrComponent()
+-    registerAFrameXrPrimitive()
+-  }
+-  if (window.AFRAME) {
+-    registerAFrame()
+-  }
+-
+-  setRenameDeprecation(jsxr, 'GLRenderer', 'XR8.GlTextureRenderer.pipelineModule', GLRenderer)
+   setRenameDeprecation(jsxr, 'ThreejsRenderer', 'XR8.Threejs', jsxr.Threejs.ThreejsRenderer)
+-  setRenameDeprecation(
+-    jsxr, 'canvasScreenshot', 'XR8.CanvasScreenshot', jsxr.CanvasScreenshot.canvasScreenshot
+-  )
+-
+-  setRenameDeprecation(jsxr, 'CameraPixelArrayModule', 'XR8.CameraPixelArray.pipelineModule',
+-    jsxr.CameraPixelArray.pipelineModule)
+-
+   setRenameDeprecation(jsxr, 'getGLctxParameters', 'XR8.GlTextureRenderer.getGLctxParameters',
+     jsxr.GlTextureRenderer.getGLctxParameters)
+ 
+@@ -301,18 +262,10 @@ const loadJsxr = async () => {
+   setRenameDeprecation(jsxr, 'isDeviceBrowserSupported', 'XR8.XrDevice.isDeviceBrowserCompatible',
+     jsxr.XrDevice.isDeviceBrowserCompatible)
+ 
+-  setRenameDeprecation(
+-    jsxr, 'FullWindowCanvas', 'XRExtras.FullWindowCanvas', FullWindowCanvasFactory(), 'R13.1'
+-  )
+-
+   setRemovalDeprecation(jsxr, 'getCompatibility', getCompatibility, 'XR8.XrDevice')
+   setRemovalDeprecation(jsxr, 'JSDevice', JSDevice, 'XR8.XrDevice')
+-  setRemovalDeprecation(jsxr, 'WorldPointsRendererModule', WorldPointsRendererModule)
+   setRemovalDeprecation(jsxr, 'trace8', loop.trace8)
+ 
+-  setRemovalDeprecation(jsxr, 'registerAFrameXrComponent', registerAFrame,
+-    'AFRAME.registerComponent(\'xrweb\', XR8.AFrame.xrwebComponent())')
+-
+   setNoopDeprecation(jsxr, 'onInitScene')
+   setNoopDeprecation(jsxr, 'exportTraces')
+   setNoopDeprecation(jsxr, 'displayTraces')

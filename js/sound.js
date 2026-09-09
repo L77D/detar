@@ -63,7 +63,6 @@ class SoundDesign {
   popIn()       { if (this.on) this.engine.pop(); }          // Figur ploppt auf
   uiReveal()    { if (this.on) this.engine.success(); }      // Menü fährt ein (Begrüßung fertig)
   questionTap() { if (this.on) this.engine.click(); }        // Frage-Button
-  tab(einblick) { if (this.on) this.engine.toggle(einblick); } // Tab-Wechsel (Einblick = an)
   gallery()     { if (this.on) this.engine.swoosh(); }       // Galerie blättern (Pfeile + 3D-Tabs)
   figureJump()  { if (this.on) this.engine.pop(); }          // Figur-Tap: Hüpfer zur Mitte
 

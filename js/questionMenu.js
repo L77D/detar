@@ -39,7 +39,7 @@ export class QuestionMenu {
     options: "Deine Antwort",
   };
   static LINES = {
-    suchen:   [{ text: "Halte auf die Karte", wave: true }], // wave wirkt nur mit body.lokal
+    suchen:   [{ text: "Halte auf die Karte", wave: true }], // Laola-Welle (css/app.css)
     gefunden: [{ text: "Karte gefunden", kind: "gelb" }, { text: "→ Tipp sie an!", einzug: true }],
     ruhe:     [{ text: "Tipp auf die Karte", pulse: true }],
     verloren: [{ text: "Halte auf die Karte" }], // Ruhezustand + Karte verloren

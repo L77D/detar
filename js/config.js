@@ -1,9 +1,8 @@
 /* =============================================================================
-   DETAR — zentrale Konfiguration (alle Dashboards des Lokal-Prototyps).
-   Parameter-NAMEN und Default-WERTE identisch zum Tuning-Prototyp
-   (DETAR_Lokal_Prototyp.html) — ein dort exportiertes Preset (.json) kann
-   unverändert als tuning.json ins Repo-Root gelegt werden und überschreibt
-   diese Defaults beim Laden (siehe loadTuning()).
+   DETAR — zentrale Konfiguration (alle Dashboards). EINE Quelle: die Werte
+   hier sind die Live-Werte. Ein aus dem Dev-Panel exportiertes Preset kann
+   als tuning.json ins Repo-Root gelegt werden und überschreibt sie beim Laden
+   (loadTuning) — für Tuning-Sessions, nicht als Dauerzustand.
    ============================================================================= */
 
 // SpeechBubble → TYPO
@@ -14,13 +13,13 @@ export const TYPO = {
   lineSpacing: 0.8,
   textColor: "#f6f6f6", // UI-Update 2026-09-03 (Figma)
   strokeColor: "#000000",
-  strokeWidth: 22,
+  strokeWidth: 8,      // 2026-09-09: aus tuning.json übernommen (vorher 22)
   paddingPx: 28,
   maxLines: 5,
   maxWidth: 1.2,
   unitsPerPx: 0.002,
-  offsetX: 0.14,
-  offsetY: -0.3,
+  offsetX: 0,          // 2026-09-09: aus tuning.json (vorher 0.14)
+  offsetY: -0.17,      // 2026-09-09: aus tuning.json (vorher -0.3)
   msPerChar: 28,
   // Dialogsystem (2026-09-03): Baseline-Lage im Zeilenraster (Anteil fontSize,
   // alphabetic) + Highlight-Effekte im Sprechtext (Auszeichnung in der Karte:
@@ -54,20 +53,20 @@ export const FACE = {
 
 // IdleWander → IDLE
 export const IDLE = {
-  markerWidth: 0.033, markerHeight: 0.033, roamFraction: 0.8,
-  bopAmplitude: 0.04, bopFrequency: 1.1,
+  markerWidth: 0.09, markerHeight: 0.125, roamFraction: 0.8, // 2026-09-09: aus tuning.json (vorher 0.033/0.033)
+  bopAmplitude: 0.015, bopFrequency: 0.5, // 2026-09-09: aus tuning.json (vorher 0.04/1.1)
   walkSpeed: 0.04, walkFrequency: 2.2, walkRollMax: 0.18, stepSquash: 0.05,
   headLookMax: 0.5, headPitchMax: 0.35,
   bopHoldMin: 1.5, bopHoldMax: 3.5, actionMin: 1.2, actionMax: 2.4,
   cameraFacingThreshold: 45, faceCamLerp: 0.12,
-  lookChance: 0.4, walkChance: 0.4,
+  lookChance: 0.6, walkChance: 0.4, // 2026-09-09: lookChance aus tuning.json (vorher 0.4)
 };
 
 // ActivationAnim → ACT
 export const ACT = {
-  durationSec: 1.2,
-  spins: 0,
-  overshoot: 1.7,
+  durationSec: 1.55, // 2026-09-09: aus tuning.json (vorher 1.2 / 0 / 1.7)
+  spins: 2,
+  overshoot: 1.75,
 };
 
 // CardController / CSS
@@ -76,9 +75,9 @@ export const CHOREO = {
                          // die Figur) · "nein" = Figur kommt direkt beim Scan
   uiRevealMs: 1000,      // reine CSS-Einfahr-DAUER (--q-reveal-time), keine Wartezeit
   revealOffset: 60,      // CSS --q-reveal-offset (px)
-  idleReturnMs: 8000,    // Haltezeit NACH dem Typewriter (wird von der Karte überschrieben)
+  idleReturnMs: 5500,    // Haltezeit NACH dem Typewriter (wird von der Karte überschrieben); 2026-09-09: aus tuning.json (vorher 8000)
   greetingPose: "idle",
-  billboardLerp: 0.18,
+  billboardLerp: 0.2,    // 2026-09-09: aus tuning.json (vorher 0.18)
   jumpDurationSec: 0.45, // Figur-Tap: Parabel-Hüpfer zur Kartenmitte
   jumpHeight: 0.04,
   // Dialogsystem (2026-09-03)
@@ -94,7 +93,8 @@ export const CHOREO = {
 // 1/cardWidth skaliert — damit gelten ALLE getunten Werte (Lauffeld, Bubble,
 // Sprünge …) unverändert weiter.
 export const SCENE = {
-  cardWidth: 0.17,   // wird von tuning.json überschrieben: 0.059 m = echte Kartenbreite
+  cardWidth: 0.059,  // physische Kartenbreite in m (59 × 91 mm hochkant, Michael 2026-09-07);
+                     // 2026-09-09: Default statt tuning.json-Override (vorher 0.17)
                      // (Karte 59×91 mm hochkant, Michael 2026-09-07; vorher 0.095)
   cardAspect: 2156 / 1346, // Höhe/Breite des Tracking-Targets (2026-09-07, 2. Fassung: beschnittene
                            // Demo-Karte 070926 ohne Rand, 1346×2156 px = 1,60; die Vollkarte war
@@ -109,15 +109,15 @@ export const SCENE = {
   debug: false,       // pinke Debug-Overlays (auch per ?debug in der URL)
 };
 
-// Tracking-Glättung. ZWEI Stufen:
-// (a) MindARs eingebauter One-Euro-Filter (filterMinCF/filterBeta) — Rohsignal.
-// (b) UNSER PoseStabilizer (js/poseStabilizer.js, Port des in Zapworks
-//     verifizierten Filters): One-Euro-Position + SLERP-Rotation + Dead-Zone
-//     + Lost-Hold zwischen Anchor und Figur. Das ist die Haupt-Glättung.
+// Tracking-Glättung: UNSER PoseStabilizer (js/poseStabilizer.js, Port des in
+// Zapworks verifizierten Filters): One-Euro-Position + SLERP-Rotation +
+// Dead-Zone + Lost-Hold zwischen Rohpose und Figur. (Die 8th-Wall-Engine hat
+// keinen konfigurierbaren Vorfilter; die MindAR-Keys filterMinCF/filterBeta/
+// missTolerance/warmupTolerance sind seit 2026-09-09 weg.)
 // Faustregel: erst minCutoff runter, bis das Ruhe-Zittern weg ist, dann beta
 // hoch, bis schnelle Bewegung ohne Nachziehen folgt — EINE Schraube pro Test.
-// EINHEITEN: Der PoseStabilizer filtert in KARTENBREITEN (er normiert MindARs
-// pixel-skalierte Anchor-Pose intern über die Anchor-Scale). posDeadZone 0.001
+// EINHEITEN: Der PoseStabilizer filtert in KARTENBREITEN (er normiert die
+// Rohpose intern über die Anchor-Scale = Kartenbreite). posDeadZone 0.001
 // = 1/1000 Kartenbreite (≈ 0,15 mm bei 15-cm-Karte); beta bezieht sich auf
 // Geschwindigkeit in Kartenbreiten/s.
 export const STAB = {
@@ -137,20 +137,6 @@ export const STAB = {
                      //   die Normierung)
   // 7 = GYRO.enabled · 8 = extrapolate (unten)
 
-  // (a) MindAR-eingebauter Filter — OHNE WIRKUNG seit 8th Wall (2026-09-09,
-  //     Branch 8thwall-image-targets): die Engine hat keinen konfigurierbaren
-  //     Vorfilter. Keys bleiben für tuning.json-/Preset-Kompatibilität stehen.
-  filterMinCF: 0.01,    // 2026-07-14: 0.001 → 0.01. Bei Karten-Bewegung hing die
-                        // intern gefilterte Pose zu weit hinter der Messung → MindARs
-                        // eigener Tracker suchte am falschen Ort und verwarf den Track
-                        // („verliert sich beim Verschieben"). Höheres CF = Pose folgt
-                        // schneller, Tracker bleibt dran.
-  filterBeta: 1000,
-  missTolerance: 5,     // Frames "Karte kurz verloren" aushalten
-  warmupTolerance: 3,   // Frames bis "Karte gefunden" gemeldet wird (5→3
-                        // 2026-07-13: schnelleres Anspringen beim Scan)
-
-  // (b) PoseStabilizer — Haupt-Glättung (Werte prüfstand-kalibriert 2026-07-08)
   minCutoff: 0.1,       // Grund-Glättung in Ruhe. KLEINER = ruhiger, aber träger.
                         // 2026-07-14: 1.0 → 0.1 (deutlich ruhiger in Ruhe; beta=10
                         // öffnet den Filter bei Bewegung, daher trotzdem reaktiv).
@@ -239,87 +225,6 @@ export const ACTFX = {
   shadowD: 0.35,       // Schatten-Rechteck: Tiefe (Anteil Icon-Breite)
 };
 
-// Einblick-Modus (PortalView + FigureFlip, js/portalView.js): Portal-Parallax-
-// Karte — übergroßes Bild HINTER der Karte, stencil-maskiert aufs Karten-
-// Fenster; Figur springt auf die Karte und legt sich plan hin.
-// EINHEITEN: Karten-Frame (Kartenbreite = SCENE.cardWidth = 0.17).
-export const PORTAL = {
-  depth: 0.06,       // Tiefen-Offset des Bilds unter der Karte (mehr = stärkere Parallaxe)
-  oversize: 2.0,     // Bildgröße relativ zum Fenster. MUSS mit depth wachsen:
-                     // Parallax-Faktor wird auf (oversize−1) geclampt — das ist
-                     // die harte „Leere nie sichtbar"-Garantie. 2.0 deckt
-                     // depth/camY bis 1.0 ab (Kamera bis 45° flach).
-  windowW: 1.05,     // Fenster-Breite als Anteil der Kartenbreite (Mockup: etwas breiter als die Karte)
-  windowH: 0.75,     // Fenster-Höhe als Anteil der Kartenhöhe (untere Karten-Sektion bleibt frei)
-  windowOffsetZ: -0.125, // Fenster-Mitte in Karten-Z (Anteil Kartenhöhe; − = Richtung
-                     // Oberkante). −0.125 + H 0.75 ⇒ Fenster-Oberkante = Karten-Oberkante,
-                     // unten bleiben 25% Karte (Zitat-Box) sichtbar — wie im Mockup.
-  damp: 0.22,        // Offset-Dämpfung (fps-normalisierter Lerp) — glättet das
-                     // durch die Tiefe verstärkte Marker-Zittern
-  minCamY: 0.02,     // Kamera flacher als das → Offset einfrieren (degeneriert)
-  fadeSec: 0.35,     // Crossfade beim Galerie-Wechsel
-  showSec: 0.4,      // Ein-/Ausblenden des Portals beim Tab-Wechsel
-  flipSec: 0.7,      // Figur-Sprung zur Portal-Oberkante (Dauer)
-  flipHeight: 0.06,  // Bogenhöhe des Sprungs
-  figureScale: 0.5,  // Figur-Größe im Einblick (Faktor; 0.33→0.5 am 2026-07-15
-                     // auf Michaels Wunsch: „1,5× größer")
-
-  // --- Design-Runde 2 (2026-07-15, Mockup einblick_02) -----------------------
-  // Pixel-Punkt-Rahmen: zwei Ring-Ebenen auf ZWISCHENTIEFEN zwischen Karte
-  // und Bild — die Parallaxe entsteht rein aus der Perspektive (statische
-  // Ebenen, stencil-maskiert). Außen = flach, innen = tiefer.
-  dotDepth1: 0.33,   // Tiefe Ring 1 (außen), Anteil von depth
-  dotDepth2: 0.66,   // Tiefe Ring 2 (innen), Anteil von depth
-  // Die beiden Ringe liegen ENG beieinander und sind um (inset2−inset1)
-  // phasenverschoben → die Punkte erscheinen als diagonale PAARE (Mockup).
-  dotInset1: 0.02,   // Rand-Abstand Ring 1 (Anteil Fensterbreite)
-  dotInset2: 0.042,  // Rand-Abstand Ring 2 (Paar-Versatz = inset2 − inset1)
-  dotSize: 0.014,    // Punkt-Kantenlänge (Anteil Fensterbreite)
-  dotGap: 0.13,      // Punkt-Abstand (Anteil Fensterbreite)
-  dotColor: "#ffdd00",
-  // Schwarzer Rahmen mit runden Ecken um das Fenster (Mockup) — liegt ÜBER
-  // Bild/Ringen/Tabs (deckt die Tab-Unterkanten ab), aber UNTER der Figur.
-  frameW: 0.03,      // Outline-Dicke (Anteil Fensterbreite)
-  frameRadius: 0.05, // Eck-Radius (Anteil Fensterbreite)
-  frameColor: "#000000",
-  // Tabs an der Portal-OBERKANTE (eine Farbfläche pro Galeriebild, antappbar;
-  // aktiv = neon + HÖHER, inaktiv = oliv + flacher; Wechsel fährt animiert
-  // hoch/runter). Keine Lücke — die schwarzen Outlines bilden die Trennlinien.
-  tabH: 0.105,       // AKTIVE Tab-Höhe (Anteil Kartenhöhe; ×1.5 am 2026-07-15)
-  tabHInactive: 0.0825, // inaktive Tab-Höhe (muss > 2×frameW-Outline bleiben,
-                     // sonst bleibt von der Farbfläche nichts übrig)
-  tabRaiseLerp: 0.2, // Hoch-/Runterfahren beim Wechsel (fps-normalisierter Lerp)
-  tabGap: 0,         // Lücke zwischen Tabs (Mockup: 0 — Outlines stoßen aneinander)
-  tabInset: 0.07,    // Einzug der Tab-Reihe von beiden Fensterkanten (Anteil Fensterbreite)
-  tabActive: "#eaff00",
-  tabInactive: "#8a8a1e",
-  // Figur lugt HINTER dem Fenster über die Kante (Mockup): die Portal-Ebenen
-  // rendern ÜBER den Figur-Layern (siehe Render-Reihenfolge in portalView.js),
-  // die Figur steht leicht IM Fenster → ihr unterer Teil wird vom Fenster
-  // verdeckt, nur der Teil über der Kante ist sichtbar.
-  peekX: -0.42,      // X-Position (Anteil Fensterbreite; − = links, Mockup: linke Rahmenecke)
-  peekZ: 0.03,       // wie tief die Figur IM Fenster liegt (Anteil Fensterhöhe;
-                     // mehr = mehr von ihr verdeckt; bei 0 ist ~die obere
-                     // Hälfte sichtbar — Figur-Mitte liegt auf der Kante)
-  peekTilt: 10,      // Grunddrehung der flachen Figur in der Ebene (Grad, + = links);
-                     // der Sway wackelt um diesen Winkel herum
-  // Caption-Anker (flach, Karten-Frame): rechts neben der Figur, UNTERKANTE
-  // fest über der Tab-Reihe — der Text-Canvas ist bottom-anchored, dadurch
-  // wächst auch 5-zeiliger Text nach OBEN und berührt die Tabs nie.
-  captionDX: 0.21,   // Abstand der TEXT-LINKEN Kante von der Figuren-Mitte
-                     // (Anteil Fensterbreite; Text ist im Flat-Modus links-verankert —
-                     // Textanfang sitzt fix, egal wie lang die Zeile ist)
-  captionGap: 0.03,  // Abstand Caption-Unterkante ↔ Tab-Oberkante (Anteil Fensterhöhe)
-  captionScale: 0.75, // Bubble-Weltgröße im Einblick (1 = wie die normale Bubble;
-                     // BubbleRoot wird gegen figureScale gegenskaliert, sonst
-                     // schrumpft der Text mit der Figur). 0.5 = Mockup-Maß,
-                     // ×1.5 auf 0.75 am 2026-07-15 (Michael).
-  // Lebendigkeits-Sway im Einblick: ±swayDeg Drehung in unregelmäßigen Abständen
-  swayDeg: 1.5,      // max. Auslenkung (Grad)
-  swayMin: 1.2,      // Pause zwischen Richtungswechseln min (s)
-  swayMax: 3.2,      // dito max (s)
-};
-
 // Sound-Design (js/sound.js → tiks, js/vendor/tiks.js): prozedurale UI-Sounds,
 // reine Web-Audio-Synthese — keine Audio-Dateien, kein Netzwerk. Das Theme
 // färbt ALLE Sounds gemeinsam ("arcade" = 8-bit/Chiptune, passt zum Pixel-Look).
@@ -354,24 +259,20 @@ export const GYRO = {
   deltaMax: 0.2,         // rad; größere Deltas = Sensor-Glitch → verwerfen (resync)
 };
 
-// Kamera (2026-09-09, 8th Wall): Die Engine wählt die Kamera-Auflösung SELBST
-// über eine geräteabhängige Constraint-Leiter mit Retry (constraints-helper der
-// Engine) — der frühere getUserMedia-Wrap aus main.js (MindAR-Finding 1,
-// 960×540 als `ideal`) ist entfallen; `width`/`height` und `?res=` sind ohne
-// Wirkung und bleiben nur für tuning.json-Kompatibilität stehen. Gelieferte
-// Auflösung weiter in ?stats ablesen.
+// Kamera: Die 8th-Wall-Engine wählt die Auflösung selbst (geräteabhängige
+// Constraint-Leiter mit Retry); gelieferte Auflösung in ?stats ablesen.
 export const CAM = {
-  width: 960,            // ohne Wirkung unter 8th Wall (s. o.)
-  height: 540,           // ohne Wirkung unter 8th Wall (s. o.)
-  maxPixelRatio: 2,      // Canvas-Cap (Finding 2, gilt weiter): main.js setzt die
+  maxPixelRatio: 2,      // Canvas-Cap (Finding 2, 2026-07-14): main.js setzt die
                          // Canvas-Pixelgröße = CSS-Größe × min(devicePixelRatio, Cap)
                          // — Cap 2 statt 3 auf iPhones gibt der Vision-Schleife GPU-Luft.
 };
 
-const ALL = { TYPO, FACE, IDLE, ACT, CHOREO, SCENE, STAB, GYRO, ACTFX, PORTAL, CAM, SOUND };
+const ALL = { TYPO, FACE, IDLE, ACT, CHOREO, SCENE, STAB, GYRO, ACTFX, CAM, SOUND };
 
-/* tuning.json (Preset-Export aus dem Lokal-Prototyp) laden und über die
-   Defaults mergen. Fehlt die Datei, laufen die Defaults — kein Fehler. */
+/* Optional: tuning.json (Preset-Export aus dem Dev-Panel) im Repo-Root
+   überschreibt die Defaults. Seit 2026-09-09 liegt KEINE tuning.json mehr im
+   Repo — alle getunten Werte sind Defaults hier; die Datei bleibt ein Werkzeug
+   für Tuning-Sessions (Dev-Panel → Export, Datei daneben legen, testen). */
 export async function loadTuning() {
   try {
     const res = await fetch("./tuning.json", { cache: "no-store" });

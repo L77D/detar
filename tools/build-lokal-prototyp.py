@@ -18,7 +18,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "DETAR_Lokal_Prototyp.html")
 CDN_THREE = "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
 CDN_ADDONS = "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
-VENDOR = os.path.join(ROOT, "tools", "vendor")
+VENDOR = os.path.join(ROOT, "vendor", "three")  # seit 2026-09-09: das schlanke Bundle der App
 
 def read(p, mode="r"):
     with open(p, mode, encoding=None if "b" in mode else "utf-8") as f: return f.read()
@@ -90,7 +90,7 @@ patch("js/supportUI.js", 'this.img.src = ICON_DIR + name + ".png";', 'this.img.s
 # --- Import-Map -----------------------------------------------------------------
 imports = {k: js_data_uri(v) for k, v in modules.items()}
 three_local = os.path.join(VENDOR, "three.module.js")
-orbit_local = os.path.join(VENDOR, "OrbitControls.js")
+orbit_local = os.path.join(VENDOR, "addons", "controls", "OrbitControls.js")
 offline = os.path.exists(three_local) and os.path.exists(orbit_local)
 if offline:
     imports["three"] = js_data_uri(read(three_local))
@@ -110,12 +110,9 @@ html = html.replace('  <link rel="stylesheet" href="./css/question-menu.css" />'
 html = re.sub(r'<script type="importmap">.*?</script>', lambda m: '<script type="importmap">' + json.dumps({"imports": imports}) + '</script>', html, flags=re.S)
 html = inline_literals(html)
 html = re.sub(r'\s*<link rel="(?:module)?preload" href="./vendor/8thwall/[^"]+"[^>]*>', "", html)
-tuning = json.loads(read(os.path.join(ROOT, "tuning.json")))
-# Nur-Lokal-Verhalten (2026-09-04): hüpfendes Icon auf der Karte; die CSS-
-# Änderungen (Silkscreen-Laufweite, Raster-Drift, Laola, enges Raster) hängen
-# an body.lokal — beides greift in der Live-App nicht.
-tuning.setdefault("ACTFX", {})["hopper"] = "ja"
-boot = ("<script>window.__LOKAL = true; document.body.classList.add('lokal'); window.__TUNING = %s; window.__ASSETS = %s; "
+tuning_path = os.path.join(ROOT, "tuning.json")
+tuning = json.loads(read(tuning_path)) if os.path.exists(tuning_path) else {}  # seit 2026-09-09 optional
+boot = ("<script>window.__LOKAL = true; window.__TUNING = %s; window.__ASSETS = %s; "
         "window.__asset = (p) => (window.__ASSETS[p] ?? p);</script>") % (json.dumps(tuning), json.dumps(assets))
 html = html.replace('<script type="module" src="./js/main.js"></script>',
                     boot + '\n  <script type="module">import "detar/js/main.js";</script>')

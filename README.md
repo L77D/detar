@@ -14,9 +14,14 @@ Erzeugung und Event-Zuordnung: `docs/8thwall-migration.md`. (`main` läuft
 noch auf MindAR.) Testlink des Branches: https://l77d.github.io/v2tracker/
 (Spiegel-Repo `L77D/v2tracker`, Pages von dessen `main`).
 
-**Kein LLM, keine externe API** — alle Inhalte sind autorisiert und hartkodiert
-(`cards/*.js`). Laufzeit-Abhängigkeiten: three.js per CDN + die 8th-Wall-Engine
-aus dem Repo.
+**Kein LLM, keine externe API, kein CDN** — alle Inhalte sind autorisiert und
+hartkodiert (`cards/*.js`). Laufzeit-Abhängigkeiten liegen komplett im Repo:
+three.js 0.160 als schlankes Bundle (`vendor/three/`, tree-shaken auf die
+genutzten Klassen) + die zugeschnittene 8th-Wall-Engine (`vendor/8thwall/`).
+Nach dem Klick geht kein Byte an Dritte. Schlank seit Branch `v2tracker-lean`
+(2026-09-09): keine tuning.json (Werte sind Defaults in `js/config.js`),
+Dev-Module nur per URL-Flag, Desktop-Modus als eigenes Modul, Einblick/Portal
+und MindAR-Targets entfernt.
 
 UI (Build 18, 2026-09-03) nach Figma „DETAR": Blau/Gelb/Schwarz, Pixel-Halo-
 Kästen, Handy-Icon, Eck-Marker. Fonts: Jersey 10 + Silkscreen, beide SIL Open
@@ -85,13 +90,13 @@ Am Handy testen ohne Deploy: Rechner und Handy im selben WLAN, dann
 `http://<rechner-ip>:8080` — Achtung, Kamera geht nur über HTTPS; für echte
 AR-Tests am Handy die GitHub-Pages-URL nehmen (push = live).
 
-## Getunte Werte (tuning.json)
+## Getunte Werte
 
-Alle Dashboards (TYPO / FACE / IDLE / ACT / CHOREO / SCENE) liegen mit
-Defaults in `js/config.js`. Ein aus dem **Lokal-Tuning-Prototyp exportiertes
-Preset** (Sidebar → „→ Datei") einfach als **`tuning.json` ins Repo-Root**
-legen — es überschreibt die Defaults beim Laden, ohne Code-Änderung.
-Datei löschen = zurück zu den Defaults.
+Alle Dashboards (TYPO / FACE / IDLE / ACT / CHOREO / SCENE / STAB …) liegen als
+Live-Werte in `js/config.js` — EINE Quelle. Für Tuning-Sessions: Dev-Panel
+(`?dev`) → „tuning.json exportieren", die Datei ins Repo-Root legen und mit
+`?dev` oder `?tuning` laden (nur dann wird sie geholt). Ergebnis danach in
+`config.js` übernehmen, Datei nicht einchecken.
 
 ## Neue Karte / neuer Beruf
 
@@ -137,7 +142,8 @@ halten die Pose bei kurzem Tracking-Verlust. (`filterMinCF`/`filterBeta`/
 index.html            Splash (DU SCANNST … START) + AR-Container + Overlays
 css/app.css           Splash, DET-Logo-Overlay, Tracking-Hinweis, Font
 css/question-menu.css Bottom-UI (Onboarding + Fragen-Karussell), CSS-Dashboard
-js/main.js            Boot, 8th-Wall-Setup (Pipeline-Modul), Desktop-Modus, Figur-Tap, Loop
+js/main.js            Boot, 8th-Wall-Setup (Pipeline-Modul), Figur-Tap, Loop
+js/desktopMode.js     ?desktop: Karte als Boden-Plane, Maus-Orbit (nur per Flag geladen)
 js/config.js          ALLE Tuning-Dashboards + tuning.json-Merge
 js/rig.js             Figuren-Hierarchie (Transforms aus Scene.zcomp)
 js/cardController.js  Choreographie + Dialogablauf: Scan → Pop-In → Begrüßung →
@@ -151,15 +157,13 @@ js/faceAnimator.js    Blinzeln + Mund-Sync
 js/activationAnim.js  Pop-In beim ersten Scan, Einklappen beim Ausstieg
 js/questionMenu.js    Onboarding + Dialog-Menü: Themenkarten, Fragen mit Marken,
                       Antwortoptionen, Weiter, Fußzeile (DOM, Karussell)
-js/portalView.js      Einblick (Portal/Galerie) — in v1 nicht aktiv
 js/debugOverlay.js    pinke Hilfslinien (?debug)
 cards/                ein .js pro Beruf (Inhalte, hartkodiert)
 assets/               Character-PNGs, Logos, Font, Kartenbild
 targets/8thwall/      Image-Target (card.json + card_luminance.png) aus image-target-cli
-targets/*.mind        alte MindAR-Targets (nur Historie, wird nicht mehr geladen)
-vendor/8thwall/       Open-Source-8th-Wall-Engine (xr.js + xr-tracking.js, MIT)
+vendor/8thwall/       Open-Source-8th-Wall-Engine, zugeschnitten (xr.js + xr-tracking.js, MIT)
+vendor/three/         three.js 0.160, tree-shaken (tools/build-three.sh)
 docs/8thwall-migration.md  Umstieg MindAR → 8th Wall: Target-Erzeugung, Änderungen, Events
-tuning.json           (optional) Preset-Export aus dem Lokal-Prototyp
 ```
 
 ## Technik-Notizen (für spätere Änderungen wichtig)
@@ -181,8 +185,9 @@ tuning.json           (optional) Preset-Export aus dem Lokal-Prototyp
 * **Painter's Algorithm:** depthTest AUS auf allen flachen Layern, feste
   renderOrder (Body 0, Head 1, Face 2, Bubble 3) — nie ändern, sonst
   verschwindet der Kopf hinter dem Body (siehe CLAUDE.md-Gotchas).
-* **three.js ist gepinnt** (0.160.0 per CDN-Importmap) — nicht blind
+* **three.js ist gepinnt** (0.160.0, Bundle in `vendor/three/`) — nicht blind
   hochziehen; `XR8.Threejs` braucht das globale THREE ≥ r125 und dieselbe
-  Instanz wie unsere Module (`window.THREE = THREE` in main.js).
+  Instanz wie unsere Module (`window.THREE = THREE` in main.js). Neue
+  `THREE.*`-Klasse im Code → `tools/three-slim-entry.js` + `tools/build-three.sh`.
 
 © Studio2B — Demo. Logos: DEIN ERSTER TAG / PENNY (mit Erlaubnis).

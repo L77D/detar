@@ -230,11 +230,38 @@ scale, scaledWidth, scaledHeight, properties`.
    „8th-Wall-Engine nicht ladbar: ./vendor/8thwall/xr.js …" — gewollt, kein
    stiller Fallback auf ein CDN.
 
-## 5. Offen / noch nicht am Gerät verifiziert
+## 5. Entschlackung (Branch `v2tracker-lean`, 2026-09-09)
 
-- Tracking-Qualität gegenüber MindAR (Jitter roh, Vision-Hz, Abrisse beim
-  Verschieben) — Prüfstand-Seiten (`Tracking-Pruefstand/`) importieren noch
-  MindAR-Pfade und müssten für einen A/B nachgezogen werden.
+Nach Michaels Handytest („Tracker deutlich besser als MindAR") wurde die App auf
+das Nötigste reduziert — PNGs bewusst noch nicht (kommt separat):
+
+- **Raus:** `js/portalView.js`, `PORTAL`-Block, Flat-Modus der Sprechblase,
+  `assets/einblick/`, MindAR-Targets (`targets/*.mind`), `cards/lagerlogistik.js`,
+  ungenutzte Logos, `tools/vendor/` (three-Kopie), `tuning.json` (Werte sind
+  jetzt Defaults in `config.js`), MindAR-Keys `STAB.filterMinCF/filterBeta/
+  missTolerance/warmupTolerance`, `CAM.width/height`, der `body.lokal`-Schalter
+  (die Feinschliff-Regeln sind Standard).
+- **Nur per Flag:** `debugOverlay` (?debug), `statsOverlay` (?stats),
+  `devPanel` (?dev), `timeline` (?dev/?timeline — vorher jeder Start inkl.
+  404 auf beats.theatre.json), `desktopMode`+`phoneFrame` (?desktop),
+  `tuning.json` (?dev/?tuning).
+- **three.js aus dem Repo:** `vendor/three/three.module.js`, tree-shaken auf die
+  genutzten Klassen (473 KB / 120 KB gz statt 1,2 MB / 250 KB gz), kein CDN
+  mehr; Bau: `tools/build-three.sh`.
+- **Engine-Kern zugeschnitten:** `xr.js` ohne A-Frame/Babylon/PlayCanvas/
+  Sumerian/CloudStudio-Adapter, MediaRecorder, CanvasScreenshot, LayersController
+  (Sky/Semantik), Pixel-Array-Module — Patch in `vendor/8thwall/README.md`.
+- **Preload:** nur noch `xr.js`; der Tracker-Chunk kommt erst nach dem Klick.
+- **Bewusst NICHT angefasst:** der PoseStabilizer samt Toggles — ohne A/B am
+  Gerät (`?dev` → Toggles 1–9, `?stats`-Zahlen) wäre Löschen Raten.
+
+## 6. Offen / noch nicht am Gerät verifiziert
+
+- Prüfstand-Seiten (`Tracking-Pruefstand/`) importieren noch MindAR-Pfade und
+  müssten für einen A/B nachgezogen werden.
+- Stabilizer-A/B am Gerät (welche der 9 Toggles noch etwas bringen) — dann
+  `js/poseStabilizer.js` + `gyroFusion.js` entsprechend kürzen.
+- Figur-PNGs → WebP (−1,5 MB) — bewusst zurückgestellt.
 - Ob 8th Wall `detail.scale` bei bewegter Karte wirklich konstant hält (Scale-
   Lock-Annahme) — am Gerät über `Re-Erk.`/„Roh↔Stab" in `?stats` ablesen.
 - Safari-Cache: `vendor/8thwall/*.js` sind groß; bei Engine-Updates Dateinamen

@@ -19,7 +19,7 @@
    werden über frame.getCamLocal() in diesen Frame transformiert.
    ============================================================================= */
 import * as THREE from "three";
-import { TYPO, CHOREO, PORTAL, SCENE, frameLerp60 } from "./config.js";
+import { TYPO, CHOREO, frameLerp60 } from "./config.js";
 import { sound } from "./sound.js";
 import {
   parseChars, serialize, charsToString, splitWords, splitSentences, splitClauses, joinWithSpace,
@@ -46,19 +46,9 @@ export class SpeechBubble {
     this.revealedChars = 0; this.lastTickMs = 0; this.typing = false; this.onDone = null;
     this.revealAt = [];          // Zeitstempel je Zeichen (für <knall>)
     this.knallUntil = 0;         // solange > now: Canvas weiter neu zeichnen
-    this.flat = false; // Einblick: Bubble liegt FLACH auf der Kartenebene (kein Billboard)
     this.element = nodes.BubbleRoot;
-    this.basePos = this.element.position.clone(); // Original-Anker über dem Kopf
     this.element.visible = false;
     this.initCanvas();
-  }
-  /* Einblick-Modus: Caption parallel zur Karte statt Billboard, Position
-     WELT-verankert (Karten-Frame) statt über dem Kopf — rechts neben der
-     Figur, Unterkante über der Tab-Reihe (siehe faceCamera). */
-  setFlat(value) {
-    this.flat = value;
-    this.bubbleYawInit = false;
-    if (!value) this.element.position.copy(this.basePos);
   }
   initCanvas() {
     this.canvas = document.createElement("canvas");
@@ -82,7 +72,7 @@ export class SpeechBubble {
     this.planeH = h;
     this.plane.position.x = TYPO.offsetX;
     this.plane.position.y = h / 2 + TYPO.offsetY;
-    // 20: über ALLEM inkl. Einblick-Portal (Bild 10/11, Rahmen 15).
+    // 20: über allen Figur-Layern (Body 0, Head 1, Face 2).
     this.plane.renderOrder = 20;
     this.plane.userData.isBubble = true; // Tap-Raycast (main.js): Blase antippen
     this.element.add(this.plane);
@@ -257,11 +247,10 @@ export class SpeechBubble {
     const yTop = canvas.height - pad - this.lines.length * lineH;
     // HORIZONTAL ZENTRIERT über die finale Breite (breiteste Zeile des
     // fertig gewrappten Texts); Zeilen im Block bleiben linksbündig.
-    // FLAT-Modus (Einblick-Caption): LINKS-verankert.
     const lineRuns = this.lines.map((l) => this.runsOf(l));
     let blockW = 0;
     for (const runs of lineRuns) blockW = Math.max(blockW, runs.reduce((s, r) => s + r.w, 0));
-    const xLeft = this.flat ? pad : (canvas.width - blockW) / 2;
+    const xLeft = (canvas.width - blockW) / 2;
 
     // Sichtbare Glyphen einsammeln: [{font, fx, x, y, text, idx0}]
     const ops = [];
@@ -374,36 +363,6 @@ export class SpeechBubble {
   }
   faceCamera(dt) {
     const obj = this.element;
-    // FLACH-Modus (Einblick): Welt-Ausrichtung = Kartenebene (Normale = Karten-
-    // hoch, Text-Oben zur Karten-Oberkante) — exakt wie die flache Figur.
-    // Gleiche Quaternion-Rechnung wie unten, nur mit Rx(−90°) statt Yaw.
-    if (this.flat) {
-      // matrixWorld ist im Loop einen Frame alt — vor dem Lesen aktualisieren
-      this.frame.worldRoot.updateWorldMatrix(true, false);
-      obj.parent.updateWorldMatrix(true, false);
-      _q1.setFromEuler(_euler.set(-Math.PI / 2, 0, 0));
-      this.frame.worldRoot.getWorldQuaternion(_q3).multiply(_q1);
-      obj.parent.getWorldQuaternion(_q2).invert();
-      obj.quaternion.copy(_q2.multiply(_q3));
-      const cardH = SCENE.cardWidth * SCENE.cardAspect;
-      const winW = SCENE.cardWidth * PORTAL.windowW;
-      const winH = cardH * PORTAL.windowH;
-      const zEdge = cardH * PORTAL.windowOffsetZ - winH / 2; // Fenster-Oberkante
-      const tabTop = zEdge - PORTAL.tabH * cardH;            // Oberkante aktiver Tab
-      const worldScale = this.element.scale.x * (obj.parent?.scale.x ?? 1);
-      const planeHCard = this.planeH * worldScale;
-      const padCard = (TYPO.paddingPx + TYPO.strokeWidth) * TYPO.unitsPerPx * worldScale;
-      const planeWCard = this.canvas.width * TYPO.unitsPerPx * worldScale;
-      _v1.set(
-        winW * (PORTAL.peekX + PORTAL.captionDX) - padCard + planeWCard / 2,
-        0.002,
-        tabTop - PORTAL.captionGap * winH - planeHCard / 2
-      );
-      this.frame.worldRoot.localToWorld(_v1);
-      obj.parent.worldToLocal(_v1);
-      obj.position.copy(_v1);
-      return;
-    }
     // Kamera + Bubble in den KARTEN-Frame transformieren (MindAR-Anpassung)
     const camL = this.frame.getCamLocal(_v1);
     if (!camL) return; // NaN-Schutz: kaputter Frame → Ausrichtung halten
@@ -433,12 +392,8 @@ export class SpeechBubble {
   }
   tick(dt) {
     if (this.plane) {
-      if (this.flat) {
-        this.plane.position.set(0, 0, 0);
-      } else {
-        this.plane.position.x = TYPO.offsetX;
-        this.plane.position.y = this.planeH / 2 + TYPO.offsetY;
-      }
+      this.plane.position.x = TYPO.offsetX;
+      this.plane.position.y = this.planeH / 2 + TYPO.offsetY;
     }
     this.faceCamera(dt);
     this.tickTypewriter();

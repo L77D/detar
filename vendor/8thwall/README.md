@@ -13,9 +13,23 @@ nichts, und `js/main.js` fordert es nie an.
 | `xr.js` | Kern: Kamera-Pipeline (`XR8.run`), `GlTextureRenderer`, `Threejs`-Modul, Chunk-Loader | ja |
 | `xr-tracking.js` | Bildtracker (Image Targets, kein SLAM). Wird von `xr.js` als Chunk `slam` nachgeladen — der Name ist historisch, in der Open-Source-Engine zeigt er auf diese Datei. WASM eingebettet. | ja |
 | `LICENSE` | MIT | ja |
+| `detar-engine-trim.patch` | Zuschnitt von jsxr.ts (s. u.) | Doku |
+| `BUILD-INFO.txt` | Commit, Build-Config, Größen | Doku |
 
 Nicht enthalten (für Bildtracking ungenutzt): `xr-face.js` (Face Effects) und
 `resources/` (Face-/Semantik-Modelle, Tablet-GLBs).
+
+## Zuschnitt (DETAR)
+
+`xr.js` ist gegenüber dem Monorepo-Stand um die Framework-Adapter (A-Frame,
+Babylon.js, PlayCanvas, Sumerian, CloudStudio-Three), MediaRecorder,
+CanvasScreenshot, LayersController (Sky/Semantik) und die Pixel-Array-Module
+erleichtert — DETAR braucht nur `run`, `XrController`, `GlTextureRenderer`,
+`Threejs`, `XrConfig`, `XrDevice`, `XrPermissions`, `loadChunk`. Der Eingriff ist
+eine einzige Datei (`reality/app/xr/js/src/jsxr.ts`) und liegt als
+`detar-engine-trim.patch` daneben: im Monorepo `git apply`, dann nur
+`//reality/app/xr/js:xr` bauen (Sekunden, WASM bleibt gecacht). Ohne Patch
+läuft DETAR mit dem ungekürzten `xr.js` genauso — nur 140 KB schwerer.
 
 ## Herkunft / selbst bauen
 

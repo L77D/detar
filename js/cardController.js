@@ -31,7 +31,6 @@ export class CardController {
     this.activation = activation;
     this.menu = menu;
     this.fx = fx ?? null;
-    this.einblick = false;     // Kompatibilität (Einblick ist in v1 nicht aktiv)
     this.idleTimer = null;
     this.timer = null;         // automatisches Weiter (setTimeout)
     this.pendingContinue = null;

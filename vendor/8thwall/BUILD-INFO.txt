@@ -4,6 +4,7 @@ Commit:   519b988136d2d22a40405f2ab7f3b04823003c45 (2026-09-05)
 Befehl:   bazelisk build --config=wasmreleasesimd //reality/app/xr/js:bundle
 Umgebung: macOS 15 (Apple M2 Pro), Bazel 7.2.1 (Bazelisk 1.29.0), Python 3.11-venv mit numpy, Node v24.6.0
 Gebaut:   2026-09-09 — Build-Dauer ca. 23 min, 4272 Aktionen
-Dateien:  xr.js (1014055 B), xr-tracking.js (3885945 B)
+Dateien:  xr.js (873359 B, zugeschnitten — s. u.), xr-tracking.js (3885945 B, unverändert)
 Weggelassen: xr-face.js, resources/ (für Bildtracking ungenutzt)
 Engine-Version: lokaler Build ohne Release-Stempel — Konsole meldet „8th Wall XR Version: 0.0.0.0s" (s = SIMD); Quellstand siehe Commit oben
+Zuschnitt (2026-09-09, Branch v2tracker-lean): reality/app/xr/js/src/jsxr.ts ohne AFrame/Babylonjs/PlayCanvas/Sumerian/CloudStudioThreejs, MediaRecorder, CanvasScreenshot, LayersController, YuvPixelsArray/CameraPixelArray und deren Deprecation-Aliase; Patch: detar-engine-trim.patch (git apply im Monorepo, dann `bazelisk build --config=wasmreleasesimd //reality/app/xr/js:xr`). Ergebnis 1014055 → 873359 B (−14 %); XR8-API für DETAR unverändert (run, XrController, GlTextureRenderer, Threejs, XrConfig, XrDevice, XrPermissions, loadChunk).

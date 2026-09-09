@@ -4,8 +4,8 @@
    Zwei Modi:
    • Normal (Handy): 8th Wall Image Targets (Open-Source-Engine, selbst gehostet
                      unter vendor/8thwall/), Figur steht auf der echten Karte.
-   • ?desktop:       Desktop-Testmodus ohne Kamera — Karte als Boden-Plane,
-                     Maus-Orbit (wie der Lokal-Prototyp). Zum Entwickeln/Prüfen.
+   • ?desktop:       Desktop-Testmodus ohne Kamera (js/desktopMode.js) — Karte
+                     als Boden-Plane, Maus-Orbit. Zum Entwickeln/Prüfen.
    • ?debug:         pinke Hilfslinien (Lauffeld + FACE_CAM-Kegel) zuschalten.
 
    TRACKING (seit 2026-09-09, Branch 8thwall-image-targets): Die Kamera und die
@@ -36,7 +36,7 @@
    ============================================================================= */
 import * as THREE from "three";
 import { card } from "../cards/elektroniker.js";
-import { TYPO, SCENE, STAB, CAM, CHOREO, loadTuning, syncCssVars } from "./config.js";
+import { SCENE, STAB, CAM, CHOREO, GYRO, loadTuning, syncCssVars } from "./config.js";
 import { buildRig } from "./rig.js";
 import { FaceAnimator } from "./faceAnimator.js";
 import { SpeechBubble } from "./speechBubble.js";
@@ -45,18 +45,15 @@ import { ActivationAnim } from "./activationAnim.js";
 import { QuestionMenu } from "./questionMenu.js";
 import { CardController } from "./cardController.js";
 import { ActivationFX } from "./activationFX.js";
-import { DebugOverlay } from "./debugOverlay.js";
 import { PoseStabilizer } from "./poseStabilizer.js";
 import { GyroFusion } from "./gyroFusion.js";
-import { StatsOverlay } from "./statsOverlay.js";
-import { GYRO } from "./config.js";
 import { sound } from "./sound.js";
 import { buildSupport } from "./supportUI.js";
 
 const params = new URLSearchParams(location.search);
 const DESKTOP_MODE = params.has("desktop");
-// Debug NUR per URL (?debug) — SCENE.debug aus einem tuning.json-Preset wird
-// bewusst ignoriert (Leftover aus Tuning-Sessions soll nie live erscheinen).
+// Debug NUR per URL (?debug) — SCENE.debug aus einem Preset wird bewusst
+// ignoriert (Leftover aus Tuning-Sessions soll nie live erscheinen).
 const DEBUG_MODE = params.has("debug");
 const DEV_MODE = params.has("dev");           // Tuning-Panel (Regler)
 const TIMELINE_MODE = params.has("timeline"); // Theatre.js-Studio (Keyframe-Editor)
@@ -67,6 +64,10 @@ const TIMELINE_MODE = params.has("timeline"); // Theatre.js-Studio (Keyframe-Edi
 // des Trackers erzwungen; 8th Wall erkennt kontinuierlich neu, ein Eingriff in
 // den Tracker ist weder nötig noch über die API möglich.)
 let relocalize = null;
+// Dev-Module werden NUR mit ihrem URL-Flag geladen (kein Byte davon im Normalfall):
+// ?debug → debugOverlay.js · ?stats → statsOverlay.js · ?dev → devPanel.js ·
+// ?dev/?timeline → timeline.js (Theatre.js) · ?desktop → desktopMode.js (+ phoneFrame.js)
+let DebugOverlay = null, StatsOverlay = null, desktop = null;
 
 // 8th-Wall-Engine, selbst gehostet (Open-Source-Build, MIT — s. vendor/8thwall/
 // README.md). xr.js lädt daneben den Chunk „slam", der in der Open-Source-Engine
@@ -82,17 +83,20 @@ let gyro = null; // GyroFusion — wird in der START-Geste angelegt (iOS-Permiss
 /* --------------------------------------------------------------------------
    Splash befüllen + Start-Button freigeben, sobald Tuning + Font geladen sind.
    -------------------------------------------------------------------------- */
-let phoneFrame = null; // Desktop-Modus: Smartphone-Rahmen (wie im Lokal-Prototyp)
-
 async function boot() {
-  await loadTuning();
+  // tuning.json nur in Tuning-Sessions holen (?dev oder ?tuning) — im Normalfall
+  // gibt es die Datei nicht, alle Werte sind Defaults in config.js (2026-09-09).
+  if (DEV_MODE || params.has("tuning")) await loadTuning();
   syncCssVars();
 
-  // Rahmen VOR dem Splash aufbauen, damit schon der Startscreen im Phone sitzt
+  // Desktop-Modus: eigenes Modul; Rahmen VOR dem Splash aufbauen, damit schon
+  // der Startscreen im Phone sitzt
   if (DESKTOP_MODE) {
-    const { PhoneFrame } = await import("./phoneFrame.js");
-    phoneFrame = new PhoneFrame();
+    desktop = await import("./desktopMode.js");
+    await desktop.createPhoneFrame();
   }
+  if (DEBUG_MODE) ({ DebugOverlay } = await import("./debugOverlay.js"));
+  if (params.has("stats")) ({ StatsOverlay } = await import("./statsOverlay.js"));
 
   el("cardName").textContent = card.profession;
   // Firmenlogo nur, wenn die Karte eines mitbringt — sonst der Name als Text
@@ -121,7 +125,7 @@ async function boot() {
       gyro.enable(); // bewusst nicht awaiten (Geste nicht verlieren)
     }
     try {
-      if (DESKTOP_MODE) await startDesktop();
+      if (DESKTOP_MODE) await desktop.startDesktop({ buildExperience, attachDevTools });
       else await startAR();
       document.body.classList.add("launched");
       document.body.classList.add("scanning"); // Suchrahmen (weiße Ecken) bis zur ersten Erkennung
@@ -185,8 +189,6 @@ function buildExperience({ renderer, scene, camera, worldRoot, isRunning, preTic
   const wander = new IdleWander(nodes, frame);
   const activation = new ActivationAnim(nodes);
   const fx = new ActivationFX(worldRoot);
-  // Einblick (js/portalView.js) ist in v1 NICHT aktiv (Scope-Entscheidung
-  // 31.08.2026: nur Dialog) — Code bleibt im Repo, wird hier nicht aufgebaut.
   let controller = null;
   const menu = new QuestionMenu(el("question-root"), null, {
     onQuestion: (q) => controller.answerQuestion(q),
@@ -199,7 +201,7 @@ function buildExperience({ renderer, scene, camera, worldRoot, isRunning, preTic
   controller = new CardController({ card, nodes, bubble, face: faceAnim, wander, activation, menu, fx });
   menu.engine = controller.engine;
   window.__detar = { controller, engine: controller.engine, fx, nodes, camera, renderer, sound }; // Debug-Zugriff (Konsole)
-  const debug = DEBUG_MODE ? new DebugOverlay(worldRoot, nodes, frame) : null;
+  const debug = DebugOverlay ? new DebugOverlay(worldRoot, nodes, frame) : null;
   if (debug) debug.setVisible(true);
 
   /* ---- Figur-Tap: Parabel-Hüpfer zurück zur Kartenmitte ------------------ */
@@ -307,16 +309,16 @@ function buildExperience({ renderer, scene, camera, worldRoot, isRunning, preTic
 }
 
 /* --------------------------------------------------------------------------
-   Dev-Werkzeuge: Theatre.js-Timeline (Beats) + Tuning-Panel.
-   Timeline lädt auch OHNE ?dev, wenn ein gespeicherter Stand
-   (beats.theatre.json) existiert — dann nur der schlanke Player.
+   Dev-Werkzeuge: Theatre.js-Timeline (Beats) + Tuning-Panel — NUR mit ?dev
+   bzw. ?timeline. (Bis 2026-09-09 lud jeder Start timeline.js und holte
+   beats.theatre.json per fetch, obwohl es die Datei nie gab. Sollen autorisierte
+   Beats einmal live laufen, hier wieder einen Player-Pfad ohne Flag öffnen.)
    -------------------------------------------------------------------------- */
 async function attachDevTools(exp) {
+  if (!DEV_MODE && !TIMELINE_MODE) return;
   let timeline = null;
   try {
     const { initTimeline } = await import("./timeline.js");
-    // Studio-UI NUR mit ?timeline (eigenes Flag — ?dev bleibt schlank);
-    // ohne Flag lädt nur der Player, falls beats.theatre.json existiert.
     timeline = await initTimeline({ nodes: exp.nodes, withStudio: TIMELINE_MODE });
   } catch (e) {
     console.warn("Timeline nicht verfügbar:", e);
@@ -359,7 +361,7 @@ async function loadTargetData() {
   const lum = data.resources?.luminanceImage;
   data.imagePath = lum ? new URL(lum, base).href : new URL(data.imagePath, location.href).href;
   // Karte liegt in der Hand → beweglich (kein „static target"). Physische
-  // Breite = Kartenbreite (tuning.json → SCENE.cardWidth, 0.059 m): damit ist
+  // Breite = Kartenbreite (SCENE.cardWidth, 0.059 m): damit ist
   // detail.scale metrisch und die mm-Angaben in ?stats stimmen; die Figur
   // hängt davon nicht ab (Anchor-Einheit = Kartenbreite, s. Kopfkommentar).
   data.moveable = true;
@@ -538,7 +540,7 @@ function detarPipelineModule(XR8, { resolve, reject }) {
       stabRoot.add(worldRoot);
 
       // ?stats — Live-Diagnose am Gerät (Tracking/Gyro/Jitter in Zahlen)
-      stats = params.has("stats")
+      stats = StatsOverlay
         ? new StatsOverlay(anchor, stabRoot, stab, gyro, { getVideo: () => video, renderer, card })
         : null;
 
@@ -568,73 +570,6 @@ function detarPipelineModule(XR8, { resolve, reject }) {
       { event: "reality.imagelost",    process: () => { if (exp) onLost(); } },
     ],
   };
-}
-
-/* --------------------------------------------------------------------------
-   Desktop-Testmodus (?desktop): kein Tracking, Karte als Boden-Plane,
-   Maus-Orbit — zum Entwickeln und Verifizieren am Rechner.
-   -------------------------------------------------------------------------- */
-async function startDesktop() {
-  const { OrbitControls } = await import("three/addons/controls/OrbitControls.js");
-  const container = el("ar-container");
-
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-  container.appendChild(renderer.domElement);
-
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(SCENE.bgColor);
-
-  const camera = new THREE.PerspectiveCamera(55, 1, 0.01, 20);
-  camera.position.set(0, 0.24, 0.34);
-
-  // Größe kommt vom Phone-Rahmen (Format-Preset oben links)
-  const sizeTo = (w, h) => {
-    renderer.setSize(w, h);
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
-  };
-  sizeTo(phoneFrame.w, phoneFrame.h);
-  phoneFrame.onResize = sizeTo;
-
-  const controls = new OrbitControls(camera, renderer.domElement);
-  controls.target.set(0, 0.09, 0);
-  controls.enableDamping = true;
-  controls.dampingFactor = 0.08;
-  controls.minDistance = 0.06;
-  controls.maxDistance = 3;
-  controls.rotateSpeed = 0.55;
-  controls.maxPolarAngle = Math.PI / 2 - 0.05;
-  controls.update();
-
-  // Karte als Boden (nur Optik im Testmodus)
-  const tex = new THREE.TextureLoader().load("./assets/card/detar_demokarte_070926.jpg");
-  tex.colorSpace = THREE.SRGBColorSpace;
-  const cardAspect = 2048 / 1500;
-  const cardMesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(1, cardAspect),
-    new THREE.MeshBasicMaterial({ map: tex })
-  );
-  cardMesh.rotation.x = -Math.PI / 2;
-  cardMesh.position.y = -0.0005;
-  cardMesh.scale.setScalar(SCENE.cardWidth);
-  scene.add(cardMesh);
-
-  // Karten-Frame = Welt (Y ist hier schon "hoch") — keine Rotation nötig.
-  const worldRoot = new THREE.Group();
-  scene.add(worldRoot);
-
-  const exp = buildExperience({ renderer, scene, camera, worldRoot });
-  const { controller, loop } = exp;
-  await attachDevTools(exp);
-
-  renderer.setAnimationLoop(() => {
-    controls.update();
-    loop();
-  });
-
-  // "Scan" simulieren wie im Lokal-Prototyp
-  setTimeout(() => { document.body.classList.remove("scanning"); controller.onCardSeen(); }, 1200);
 }
 
 boot();
