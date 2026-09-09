@@ -11,7 +11,8 @@ Targets aus der **Open-Source-8th-Wall-Engine** (MIT), selbst gehostet unter
 `vendor/8thwall/` — nur Bildtracking, kein SLAM, kein Niantic-Server, kein
 API-Key. Die Engine startet erst nach „Scan starten". Umstieg, Target-
 Erzeugung und Event-Zuordnung: `docs/8thwall-migration.md`. (`main` läuft
-noch auf MindAR.)
+noch auf MindAR.) Testlink des Branches: https://l77d.github.io/v2tracker/
+(Spiegel-Repo `L77D/v2tracker`, Pages von dessen `main`).
 
 **Kein LLM, keine externe API** — alle Inhalte sind autorisiert und hartkodiert
 (`cards/*.js`). Laufzeit-Abhängigkeiten: three.js per CDN + die 8th-Wall-Engine

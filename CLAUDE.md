@@ -1,6 +1,6 @@
 # CLAUDE.md — DETAR WebAR
 
-Stand: 2026-09-09 · Build 47 (Branch `8thwall-image-targets`: Tracking auf 8th Wall) · Live (main, Build 33, MindAR): https://l77d.github.io/detar
+Stand: 2026-09-09 · Build 48 (Branch `8thwall-image-targets`: Tracking auf 8th Wall, Engine eingecheckt) · Live (main, Build 33, MindAR): https://l77d.github.io/detar
 
 ## Projekt
 
@@ -129,10 +129,11 @@ gebaut, nicht bumpen). Vanilla ES-Module, GitHub Pages (served NUR `main`).
 
 - `main` — live (Pages deployt automatisch)
 - `8thwall-image-targets` — Tracking auf 8th Wall Image Targets (Open-Source-
-  Engine, selbst gehostet). Nicht gemerged; am Handy braucht ein Branch-Test
-  einen eigenen HTTPS-Host (Pages served nur main). Vor dem Merge: Engine-
-  Dateien in `vendor/8thwall/` vorhanden (Bazel-Build, s. dortige README),
-  Gerätetest per `?stats`.
+  Engine, selbst gehostet). Nicht gemerged. **Testdeployment:** Spiegel-Repo
+  `L77D/v2tracker` (Branch → dessen `main`) → https://l77d.github.io/v2tracker/
+  — nach jedem Push auf den Branch nachziehen:
+  `git push <v2tracker-remote> 8thwall-image-targets:main`. Gerätetest per
+  `?stats`; Build-Check dort vergleicht gegen die eigene version.js.
 - `pruefstand` — Strategie E: `?record` / `?replay` / `?metrics`
   (Session-Aufnahme am Gerät, Replay + Vergleichszahlen am Desktop).
   Noch nicht gemerged; `?record` braucht HTTPS = erst nach Merge am Handy nutzbar.

@@ -1,0 +1,9 @@
+Open-Source-8th-Wall-Engine (MIT) — selbst gebaut
+Quelle:   https://github.com/8thwall/8thwall
+Commit:   519b988136d2d22a40405f2ab7f3b04823003c45 (2026-09-05)
+Befehl:   bazelisk build --config=wasmreleasesimd //reality/app/xr/js:bundle
+Umgebung: macOS 15 (Apple M2 Pro), Bazel 7.2.1 (Bazelisk 1.29.0), Python 3.11-venv mit numpy, Node v24.6.0
+Gebaut:   2026-09-09 — Build-Dauer ca. 23 min, 4272 Aktionen
+Dateien:  xr.js (1014055 B), xr-tracking.js (3885945 B)
+Weggelassen: xr-face.js, resources/ (für Bildtracking ungenutzt)
+Engine-Version: lokaler Build ohne Release-Stempel — Konsole meldet „8th Wall XR Version: 0.0.0.0s" (s = SIMD); Quellstand siehe Commit oben

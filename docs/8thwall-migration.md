@@ -134,7 +134,13 @@ kein `appKey`, keine Analytics, kein `fetch` an Niantic. Einzige Fundstellen:
 `apps.8thwall.com` (nur für die alte Hosted-Plattform relevant, in den
 Tracking-Pfaden ungenutzt) und `XR8.Platform.registerAuthorizationTokenCallback`
 in `tracking-controller.ts`, das nur bei VPS aktiviert würde (`start()` wird
-nie gerufen). Das Kamerabild bleibt auf dem Gerät.
+nie gerufen). In den GEBAUTEN Dateien stehen zusätzlich zwei URL-Gruppen,
+die nur von Codepfaden erreicht werden, die DETAR nie aufruft:
+`cdn.8thwall.com/web/resources/draco-*` (Draco-Decoder für komprimierte
+GLTF-Modelle — wir laden keine GLTF) und `cdn.jsdelivr.net/npm/@webxr-input-
+profiles/…` (Hand-Modelle für WebXR-Headset-Sessions). Beim Bildtracking am
+Handy wird nichts davon angefragt (Netzwerk-Tab prüfen: nur eigene Dateien).
+Das Kamerabild bleibt auf dem Gerät.
 
 ---
 
@@ -200,7 +206,7 @@ scale, scaledWidth, scaledHeight, properties`.
   `tuning.json`-Kompatibilität.
 - `tools/build-lokal-prototyp.py`: MindAR-Stub entfernt, Vendor-Preload-Links
   werden aus der Einzeldatei gestrichen. `tools/dev-server.js`: MIME für `.wasm`.
-- `js/version.js`: Build 47 (Commit-Zahl des Branch-Commits).
+- `js/version.js`: Build 47/48 (Commit-Zahl der Branch-Commits).
 
 ---
 
@@ -212,8 +218,10 @@ scale, scaledWidth, scaledHeight, properties`.
    Kamerafreigabe → Karte vor die Webcam (`allowedDevices: ANY` erlaubt das
    ohne World-Tracking). Konsole: `8th Wall XR Version …`, `DETAR Target
    geladen`, dann `Track: FOUND` in `?stats`.
-3. **Handy:** braucht HTTPS. GitHub Pages liefert nur `main` — für einen
-   Branch-Test die Dateien auf einen HTTPS-Host legen oder lokal per
+3. **Handy:** braucht HTTPS. GitHub Pages liefert nur `main` des Repos —
+   der Branch wird deshalb ins Spiegel-Repo `L77D/v2tracker` gepusht
+   (`git push <remote> 8thwall-image-targets:main`) und ist unter
+   https://l77d.github.io/v2tracker/ erreichbar; alternativ lokal per
    `ngrok http 8743`. Richtwerte in `?stats` wie bisher (Jitter stab < 0,3 mm
    in der Hand). Erwartung: Scale-Lock hält, weil 8th Wall `scale` pro Track
    konstant liefert — falls `Re-Erk.` in `?stats` hochzählt oder die Figur
