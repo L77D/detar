@@ -13,12 +13,13 @@
        Chrome 89, relative ES-Module-Imports laufen ab iOS 11 / Chrome 61 —
        js/*.js importieren deshalb ../vendor/three/three.module.js direkt. -->
   <!-- 8th-Wall-Engine (Open-Source-Build, MIT, selbst gehostet unter
-       vendor/8thwall/ — kein CDN, kein Niantic-Server, kein API-Key). Hier nur
-       der Kern VORGELADEN (Netzwerk, nicht ausgeführt); der 1,2-MB-Tracker-
-       Chunk xr-tracking.js wird bewusst erst nach dem Klick geholt. Das
-       Skript-Tag setzt js/main.js in der Start-Geste („Scan starten"), vorher
-       läuft weder Engine noch Kamera. -->
-  <link rel="preload" href="./vendor/8thwall/xr.js" as="script" />
+       vendor/8thwall/ bzw. vendor/8thwall-nosimd/ — kein CDN, kein Niantic-
+       Server, kein API-Key). Den Kern lädt js/main.js in boot() per JS-Preload
+       vor (Netzwerk, nicht ausgeführt) — welche Variante, entscheidet ein
+       WASM-SIMD-Test am Gerät, deshalb kein statischer <link rel=preload> mehr
+       (2026-09-09). Der Tracker-Chunk xr-tracking.js wird bewusst erst nach
+       dem Klick geholt; das Skript-Tag setzt main.js in der Start-Geste
+       („Scan starten"), vorher läuft weder Engine noch Kamera. -->
 </head>
 <body>
   <!-- Pixel-Halo-Filter (UI-Update 2026-09-03): Textkasten mit ausgefransten

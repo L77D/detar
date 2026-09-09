@@ -96,8 +96,9 @@ patch("js/supportUI.js", 'this.img.src = ICON_DIR + name + ".png";', 'this.img.s
 # --- Import-Map -----------------------------------------------------------------
 imports = {k: js_data_uri(v) for k, v in modules.items()}
 # (8th Wall, 2026-09-09: die Engine wird von main.js erst im AR-Modus per Skript-Tag
-# geladen — im Lokal-Prototyp (immer Desktop) passiert das nie. Nur die Preload-Links
-# aus index.html entfernen, sonst meldet der Browser fehlende vendor/-Dateien.)
+# geladen — im Lokal-Prototyp (immer Desktop) passiert das nie; auch der JS-Preload in
+# boot() ist an !DESKTOP_MODE gebunden. Die Regex unten räumt vorsorglich statische
+# Preload-Links aus index.html weg, falls dort wieder welche stehen.)
 
 # --- HTML zusammensetzen ---------------------------------------------------------
 html = read(os.path.join(ROOT, "index.html"))

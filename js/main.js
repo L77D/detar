@@ -73,7 +73,26 @@ let DebugOverlay = null, StatsOverlay = null, desktop = null;
 // 8th-Wall-Engine, selbst gehostet (Open-Source-Build, MIT — s. vendor/8thwall/
 // README.md). xr.js lädt daneben den Chunk „slam", der in der Open-Source-Engine
 // xr-tracking.js ist: der reine Bildtracker, KEIN SLAM-Binary.
-const XR_ENGINE_URL = "./vendor/8thwall/xr.js";
+//
+// ZWEI VARIANTEN (Production-Härtung 2026-09-09): vendor/8thwall/ ist mit
+// WASM-SIMD gebaut (wasmreleasesimd; braucht iOS 16.4 / Chrome 91 — ältere
+// Browser lehnen das Modul beim Instanziieren ab, die Engine stirbt nach dem
+// Klick), vendor/8thwall-nosimd/ ohne SIMD (wasmrelease; läuft ab iOS 11 /
+// Chrome 57, nur langsamer). Der Test unten ist byte-identisch mit der Engine-
+// eigenen Prüfung (wasm-feature-detect: v128-Konstante + i8x16.add). Der Chunk
+// xr-tracking.js wird von xr.js relativ zu seinem EIGENEN Pfad geladen — die
+// Variante des Kerns zieht also automatisch den passenden Tracker nach.
+// ?nosimd erzwingt die Nicht-SIMD-Variante (Test); ?stats zeigt die Wahl.
+function hasWasmSimd() {
+  try {
+    return typeof WebAssembly === "object" && WebAssembly.validate(new Uint8Array([
+      0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 123, 3, 2, 1, 0, 10, 10, 1, 8, 0, 65, 0, 253, 15, 253, 98, 11,
+    ]));
+  } catch (e) { return false; }
+}
+const ENGINE_SIMD = !params.has("nosimd") && hasWasmSimd();
+const ENGINE_VARIANT = ENGINE_SIMD ? "SIMD" : (params.has("nosimd") ? "nicht-SIMD (?nosimd)" : "nicht-SIMD (Fallback)");
+const XR_ENGINE_URL = ENGINE_SIMD ? "./vendor/8thwall/xr.js" : "./vendor/8thwall-nosimd/xr.js";
 // Image-Target-Daten (image-target-cli, s. docs/8thwall-migration.md). Eine
 // Seite = eine Karte = ein Target.
 const TARGET_URL = "./targets/8thwall/card.json";
@@ -93,6 +112,17 @@ async function boot() {
     el("cardName").textContent = card.profession;
     showPreflightScreen(blocked);
     return;
+  }
+  // Engine-Kern VORLADEN (Netzwerk, nicht ausgeführt) — erst hier per JS statt
+  // als <link> in index.html, weil die Variante (SIMD / nicht-SIMD) vom Gerät
+  // abhängt; so lädt jedes Gerät nur die eine xr.js, die es auch nutzt. Der
+  // Tracker-Chunk kommt weiterhin erst nach dem Klick. Im Desktop-Modus
+  // wird die Engine nie gebraucht.
+  if (!DESKTOP_MODE) {
+    const pre = document.createElement("link");
+    pre.rel = "preload"; pre.as = "script"; pre.href = XR_ENGINE_URL;
+    document.head.appendChild(pre);
+    console.log("DETAR Engine-Variante:", ENGINE_VARIANT, "→", XR_ENGINE_URL);
   }
   // tuning.json nur in Tuning-Sessions holen (?dev oder ?tuning) — im Normalfall
   // gibt es die Datei nicht, alle Werte sind Defaults in config.js (2026-09-09).
@@ -551,7 +581,7 @@ function detarPipelineModule(XR8, { resolve, reject }) {
 
       // ?stats — Live-Diagnose am Gerät (Tracking/Gyro/Jitter in Zahlen)
       stats = StatsOverlay
-        ? new StatsOverlay(anchor, stabRoot, stab, gyro, { getVideo: () => video, renderer, card })
+        ? new StatsOverlay(anchor, stabRoot, stab, gyro, { getVideo: () => video, renderer, card, engine: ENGINE_VARIANT })
         : null;
 
       exp = buildExperience({

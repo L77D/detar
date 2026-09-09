@@ -1,0 +1,17 @@
+Open-Source-8th-Wall-Engine (MIT) — selbst gebaut, Variante OHNE WASM-SIMD
+Quelle:   https://github.com/8thwall/8thwall
+Commit:   519b988136d2d22a40405f2ab7f3b04823003c45 (2026-09-05) — derselbe Stand wie vendor/8thwall/
+Befehl:   bazelisk build --config=wasmrelease //reality/app/xr/js:bundle   (wasmrelease = ohne simd)
+Umgebung: macOS 15 (Apple M2 Pro), Bazel 7.2.1 (Bazelisk), Python 3.11-venv mit numpy, Node v24.6.0
+Gebaut:   2026-09-09 — 3254 Aktionen (Disk-Cache aus dem SIMD-Build genutzt)
+Dateien:  xr.js (872074 B, zugeschnitten mit detar-engine-trim.patch wie die SIMD-Variante), xr-tracking.js (3678365 B)
+Weggelassen: xr-face.js, resources/ (für Bildtracking ungenutzt)
+Zweck:    Fallback für Browser ohne WASM-SIMD (vor iOS 16.4 / Chrome 91). js/main.js
+          wählt per WebAssembly.validate (SIMD-Testmodul, identisch zur Engine-eigenen
+          Prüfung) zwischen vendor/8thwall/ (SIMD) und diesem Ordner; ?nosimd erzwingt ihn.
+Geprüft:  eingebettete WASM-Blobs mit wasmtime validiert — SIMD-Variante: xr.js UND
+          xr-tracking.js sind ohne SIMD-Unterstützung UNGÜLTIG (also stirbt dort auch
+          schon der Kern, nicht erst der Tracker); diese Variante: beide Blobs auch ohne
+          SIMD gültig (xr.js-WASM 414758 B / 211 × 0xFD, Tracker-WASM 2466597 B / 2020 × 0xFD
+          gegenüber 1634 / 27969 in der SIMD-Variante).
+Engine-Version: lokaler Build ohne Release-Stempel — Konsole meldet „8th Wall XR Version: 0.0.0.0" (ohne s = nicht-SIMD)

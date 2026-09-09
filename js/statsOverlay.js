@@ -116,6 +116,10 @@ export class StatsOverlay {
       `Vision: ${this.stab.visionHz ?? "—"} Hz  ${this.stab.moving ? "BEWEGT" : "ruhig"}\n` +
       `Roh↔Stab: ${(this.stab.rawSkewDeg ?? 0).toFixed(1)}°  ${((this.stab.rawOffset ?? 0) * 1000).toFixed(1)}‰KB  Re-Erk.: ${this.stab.relocCount ?? 0}\n` +
       `Build: ${build}\n` +
+      // Engine-Variante (2026-09-09): SIMD oder Nicht-SIMD-Fallback (main.js
+      // wählt per WebAssembly.validate; Konsole: „8th Wall XR Version: …s"
+      // = SIMD, ohne s = nicht-SIMD)
+      `Engine: ${this.env?.engine ?? "—"}\n` +
       // Karten-Kennung (2026-09-07): zeigt, welche Kartendatei der Browser
       // tatsächlich geladen hat — Safari cached jede Datei einzeln (Pages:
       // max-age 600), ein frischer Build kann eine alte Karte mitschleppen.
