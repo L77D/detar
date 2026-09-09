@@ -6,7 +6,7 @@
    kalibrieren: erst minCutoff runter, bis „Stab" in Ruhe < ~0,3 mm, dann
    beta hoch, bis Bewegung ohne Nachziehen folgt.
    ============================================================================= */
-import * as THREE from "three";
+import * as THREE from "../vendor/three/three.module.js";
 import { GYRO } from "./config.js";
 import { BUILD } from "./version.js";
 

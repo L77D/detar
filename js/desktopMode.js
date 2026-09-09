@@ -4,7 +4,7 @@
    Verifizieren am Rechner. Eigenes Modul seit 2026-09-09: wird nur mit
    ?desktop geladen, die Live-App trägt davon nichts.
    ============================================================================= */
-import * as THREE from "three";
+import * as THREE from "../vendor/three/three.module.js";
 import { SCENE } from "./config.js";
 
 let phoneFrame = null;
@@ -19,7 +19,7 @@ export async function createPhoneFrame() {
 /* Szene + Loop; buildExperience/attachDevTools kommen aus main.js (gemeinsamer
    Aufbau für AR und Desktop). Simuliert nach 1,2 s den Scan. */
 export async function startDesktop({ buildExperience, attachDevTools }) {
-  const { OrbitControls } = await import("three/addons/controls/OrbitControls.js");
+  const { OrbitControls } = await import("../vendor/three/addons/controls/OrbitControls.js");
   const container = document.getElementById("ar-container");
 
   const renderer = new THREE.WebGLRenderer({ antialias: true });

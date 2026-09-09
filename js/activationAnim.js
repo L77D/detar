@@ -2,7 +2,7 @@
    DETAR — ActivationAnim: Pop-In beim ersten Scan (Ease-Out-Back auf die
    ECHTE Start-Scale, optional Spin auf rotation.y). 1:1-Port.
    ============================================================================= */
-import * as THREE from "three";
+import * as THREE from "../vendor/three/three.module.js";
 import { ACT } from "./config.js";
 
 export class ActivationAnim {

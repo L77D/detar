@@ -19,7 +19,7 @@
    zum Neuladen. Deshalb wird JEDE gelesene Pose auf Endlichkeit geprüft und
    ein kaputter Frame komplett verworfen.
    ============================================================================= */
-import * as THREE from "three";
+import * as THREE from "../vendor/three/three.module.js";
 import { STAB, GYRO } from "./config.js";
 
 const _pos = new THREE.Vector3();

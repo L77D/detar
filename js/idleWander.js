@@ -13,7 +13,7 @@
    rotation.y · Roll = rotation.z · Nick = HeadNod.rotation.x. NIE rotation.x
    der FigureRoot anfassen.
    ============================================================================= */
-import * as THREE from "three";
+import * as THREE from "../vendor/three/three.module.js";
 import { IDLE, frameLerp60 } from "./config.js";
 
 const _camL = new THREE.Vector3();

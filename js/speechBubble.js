@@ -18,7 +18,7 @@
    (frame.worldRoot) definiert, nicht in Weltkoordinaten. Alle Kamera-Posen
    werden über frame.getCamLocal() in diesen Frame transformiert.
    ============================================================================= */
-import * as THREE from "three";
+import * as THREE from "../vendor/three/three.module.js";
 import { TYPO, CHOREO, frameLerp60 } from "./config.js";
 import { sound } from "./sound.js";
 import {

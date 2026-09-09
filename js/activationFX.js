@@ -12,7 +12,7 @@
    unter der Figur (0.5 — Figur ab 0..3, Marker sind nur sichtbar, solange
    die Figur versteckt ist).
    ============================================================================= */
-import * as THREE from "three";
+import * as THREE from "../vendor/three/three.module.js";
 import { ACTFX, SCENE } from "./config.js";
 
 // L-Form aus dem Figma-Export (viewBox 32,59): Quadrat ohne die Ecke oben rechts

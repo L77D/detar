@@ -34,7 +34,7 @@
    Einheit = eine Kartenbreite — genau wie bei MindAR — und worldRoot.scale =
    1/cardWidth lässt alle getunten Werte (Lauffeld, Bubble, Sprünge …) gelten.
    ============================================================================= */
-import * as THREE from "three";
+import * as THREE from "../vendor/three/three.module.js";
 import { card } from "../cards/elektroniker.js";
 import { SCENE, STAB, CAM, CHOREO, GYRO, loadTuning, syncCssVars } from "./config.js";
 import { buildRig } from "./rig.js";

@@ -3,7 +3,7 @@
    Kegel + aktuelle Blickrichtung. Aktivieren per ?debug in der URL.
    Port aus dem Lokal-Prototyp; Kamera-Position kommt aus dem Karten-Frame.
    ============================================================================= */
-import * as THREE from "three";
+import * as THREE from "../vendor/three/three.module.js";
 import { IDLE } from "./config.js";
 
 const DEBUG_PINK = 0xff2fd6;

@@ -5,7 +5,7 @@
    Painter's Algorithm: depthTest AUS auf allen flachen Layern, feste
    renderOrder (Body 0, Head 1, Face 2, Bubble 3) — wie LayerSort.
    ============================================================================= */
-import * as THREE from "three";
+import * as THREE from "../vendor/three/three.module.js";
 import { SCENE } from "./config.js";
 
 const texLoader = new THREE.TextureLoader();

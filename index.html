@@ -8,15 +8,10 @@
   <link rel="stylesheet" href="./css/question-menu.css" />
   <!-- three.js 0.160 aus dem Repo (vendor/three/, tree-shaken — s. dortige
        README); seit 2026-09-09 kein CDN mehr. Neue THREE.*-Klasse im Code →
-       tools/three-slim-entry.js + tools/build-three.sh. -->
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "./vendor/three/three.module.js",
-      "three/addons/": "./vendor/three/addons/"
-    }
-  }
-  </script>
+       tools/three-slim-entry.js + tools/build-three.sh. KEINE Importmap mehr
+       (Production-Härtung 2026-09-09): Import-Maps brauchen iOS 16.4 /
+       Chrome 89, relative ES-Module-Imports laufen ab iOS 11 / Chrome 61 —
+       js/*.js importieren deshalb ../vendor/three/three.module.js direkt. -->
   <!-- 8th-Wall-Engine (Open-Source-Build, MIT, selbst gehostet unter
        vendor/8thwall/ — kein CDN, kein Niantic-Server, kein API-Key). Hier nur
        der Kern VORGELADEN (Netzwerk, nicht ausgeführt); der 1,2-MB-Tracker-

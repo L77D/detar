@@ -18,7 +18,7 @@
    Fail-safe: keine Permission / keine Events / stale Daten → getDelta()
    liefert null, alles läuft wie ohne Gyro. Kill-Switch: ?nogyro.
    ============================================================================= */
-import * as THREE from "three";
+import * as THREE from "../vendor/three/three.module.js";
 import { GYRO } from "./config.js";
 
 const DEG = Math.PI / 180;

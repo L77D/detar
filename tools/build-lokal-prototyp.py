@@ -6,9 +6,12 @@ Phone-Rahmen + Dev-Panel, alle Module/Assets/Fonts eingebettet.
 
 Technik: ES-Module bleiben Module — sie liegen als data:-URLs in einer
 Import-Map (Spezifizierer „detar/<pfad>"), Assets als data:-URIs, tuning.json
-als eingebettetes Objekt (fetch geht unter file:// nicht). three.js kommt vom
-CDN (Internet nötig) — oder aus tools/vendor/three.module.js +
-OrbitControls.js, wenn die Dateien dort liegen (dann komplett offline).
+als eingebettetes Objekt (fetch geht unter file:// nicht). three.js kommt aus
+vendor/three/ (schlankes Bundle + OrbitControls, seit 2026-09-09 relative
+Imports ohne Importmap in der App) — komplett offline. Die Import-Map bleibt
+NUR hier im Einzeldatei-Export nötig (data:-URLs können sich nicht relativ
+gegenseitig importieren); die Live-App kommt seit der Production-Härtung
+(2026-09-09) ohne aus.
 
 Aufruf:  python3 tools/build-lokal-prototyp.py [Zielpfad.html]
 """
@@ -16,8 +19,6 @@ import base64, json, mimetypes, os, re, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "DETAR_Lokal_Prototyp.html")
-CDN_THREE = "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
-CDN_ADDONS = "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
 VENDOR = os.path.join(ROOT, "vendor", "three")  # seit 2026-09-09: das schlanke Bundle der App
 
 def read(p, mode="r"):
@@ -58,7 +59,7 @@ def add_module(rel):
     def resolve(spec):
         if spec.startswith("."):
             return "detar/" + os.path.normpath(os.path.join(d, spec)).replace(os.sep, "/")
-        return spec  # three, three/addons/…, mindar-image-three
+        return spec  # (seit 2026-09-09 nur noch relative Spezifizierer — three kommt aus vendor/)
     src = re.sub(r'(from\s+|import\s*\(\s*|import\s+)(["\'])([^"\']+)\2',
                  lambda m: m.group(1) + m.group(2) + resolve(m.group(3)) + m.group(2), src)
     src = inline_literals(src)
@@ -69,6 +70,11 @@ for dp, _, files in os.walk(os.path.join(ROOT, "js")):
         if f.endswith(".js"): add_module(os.path.relpath(os.path.join(dp, f), ROOT).replace(os.sep, "/"))
 for f in os.listdir(os.path.join(ROOT, "cards")):
     if f.endswith(".js"): add_module("cards/" + f)
+# three.js + OrbitControls wie normale Module (relative Imports ../vendor/three/…
+# aus js/ bzw. ../../three.module.js aus OrbitControls.js lösen auf dieselben Keys)
+for rel in ("vendor/three/three.module.js", "vendor/three/addons/controls/OrbitControls.js"):
+    assert os.path.exists(os.path.join(ROOT, rel)), "fehlt: " + rel + " (tools/build-three.sh)"
+    add_module(rel)
 
 # --- Gezielte Patches für den Einzeldatei-Betrieb ----------------------------
 def patch(name, old, new):
@@ -89,15 +95,6 @@ patch("js/supportUI.js", 'this.img.src = ICON_DIR + name + ".png";', 'this.img.s
 
 # --- Import-Map -----------------------------------------------------------------
 imports = {k: js_data_uri(v) for k, v in modules.items()}
-three_local = os.path.join(VENDOR, "three.module.js")
-orbit_local = os.path.join(VENDOR, "addons", "controls", "OrbitControls.js")
-offline = os.path.exists(three_local) and os.path.exists(orbit_local)
-if offline:
-    imports["three"] = js_data_uri(read(three_local))
-    imports["three/addons/controls/OrbitControls.js"] = js_data_uri(read(orbit_local))
-else:
-    imports["three"] = CDN_THREE
-    imports["three/addons/"] = CDN_ADDONS
 # (8th Wall, 2026-09-09: die Engine wird von main.js erst im AR-Modus per Skript-Tag
 # geladen — im Lokal-Prototyp (immer Desktop) passiert das nie. Nur die Preload-Links
 # aus index.html entfernen, sonst meldet der Browser fehlende vendor/-Dateien.)
@@ -107,7 +104,9 @@ html = read(os.path.join(ROOT, "index.html"))
 css = inline_literals(read(os.path.join(ROOT, "css/app.css"))) + "\n" + inline_literals(read(os.path.join(ROOT, "css/question-menu.css")))
 html = re.sub(r'\s*<link rel="stylesheet" href="./css/app.css" />', "", html)
 html = html.replace('  <link rel="stylesheet" href="./css/question-menu.css" />', "  <style>\n" + css + "\n  </style>")
-html = re.sub(r'<script type="importmap">.*?</script>', lambda m: '<script type="importmap">' + json.dumps({"imports": imports}) + '</script>', html, flags=re.S)
+# Import-Map NUR im Einzeldatei-Export (index.html hat seit 2026-09-09 keine mehr)
+html = re.sub(r'<script type="importmap">.*?</script>\s*', "", html, flags=re.S)
+html = html.replace("</head>", '  <script type="importmap">' + json.dumps({"imports": imports}) + '</script>\n</head>', 1)
 html = inline_literals(html)
 html = re.sub(r'\s*<link rel="(?:module)?preload" href="./vendor/8thwall/[^"]+"[^>]*>', "", html)
 tuning_path = os.path.join(ROOT, "tuning.json")
@@ -116,8 +115,7 @@ boot = ("<script>window.__LOKAL = true; window.__TUNING = %s; window.__ASSETS = 
         "window.__asset = (p) => (window.__ASSETS[p] ?? p);</script>") % (json.dumps(tuning), json.dumps(assets))
 html = html.replace('<script type="module" src="./js/main.js"></script>',
                     boot + '\n  <script type="module">import "detar/js/main.js";</script>')
-html = html.replace("<title>DEIN ERSTER TAG — AR</title>",
-                    "<title>DETAR — Lokal-Prototyp (%s)</title>" % ("offline" if offline else "three.js vom CDN"))
+html = html.replace("<title>DEIN ERSTER TAG — AR</title>", "<title>DETAR — Lokal-Prototyp (offline)</title>")
 with open(OUT, "w", encoding="utf-8") as f: f.write(html)
-print("geschrieben: %s (%.1f MB, %d Module, %d Assets, three.js %s)" % (
-    OUT, os.path.getsize(OUT) / 1e6, len(modules), len(assets), "eingebettet" if offline else "vom CDN"))
+print("geschrieben: %s (%.1f MB, %d Module, %d Assets, three.js eingebettet)" % (
+    OUT, os.path.getsize(OUT) / 1e6, len(modules), len(assets)))
