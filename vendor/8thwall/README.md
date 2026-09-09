@@ -45,8 +45,20 @@ bazelisk build --config=wasmreleasesimd //reality/app/xr/js:bundle
 unzip -o bazel-bin/reality/app/xr/js/bundle.zip xr.js xr-tracking.js -d /pfad/zu/detar/vendor/8thwall/
 ```
 
-`wasmrelease` (ohne `simd`) baut eine Variante für Browser ohne WASM-SIMD;
-alle aktuellen iOS/Android-Browser können SIMD.
+`wasmrelease` (ohne `simd`) baut die Variante für Browser ohne WASM-SIMD
+(vor iOS 16.4 / Chrome 91) — sie liegt seit der Production-Härtung
+(2026-09-09) in `vendor/8thwall-nosimd/` (gleicher Commit, gleicher Patch,
+eigene `BUILD-INFO.txt` mit wasmtime-Prüfprotokoll). `js/main.js` wählt per
+`WebAssembly.validate` auf dem SIMD-Testmodul; `?nosimd` erzwingt den
+Fallback. **Bei jedem Engine-Update beide Varianten bauen** (zweiter Build
+nutzt den Bazel-Disk-Cache, ≈ 5 min):
+
+```bash
+bazelisk build --config=wasmrelease //reality/app/xr/js:bundle
+unzip -o bazel-bin/reality/app/xr/js/bundle.zip xr.js xr-tracking.js -d /pfad/zu/detar/vendor/8thwall-nosimd/
+```
+(Bazel-Ausgaben sind schreibgeschützt: vor dem Überschreiben `chmod u+w`.
+Python-venv mit numpy und `PYTHON_BIN_PATH` nötig, s. BUILD-INFO.)
 
 Eingecheckter Stand: siehe `BUILD-INFO.txt` (Commit, Datum, Build-Config,
 Dateigrößen). Bei jedem Engine-Update diese Datei mitziehen und — wegen des

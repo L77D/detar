@@ -1,6 +1,6 @@
-# DETAR — Umstieg auf 8th Wall Image Targets (Branch `8thwall-image-targets`)
+# DETAR — Umstieg auf 8th Wall Image Targets (Branch `8thwall-image-targets` → `v2tracker-lean` → `v2tracker-prod`)
 
-Stand 2026-09-09. Ersetzt MindAR (`mind-ar@1.2.5`) als Kamera- und Tracking-
+Stand 2026-09-09 (Abschnitt 7 = Production-Härtung, Branch `v2tracker-prod`). Ersetzt MindAR (`mind-ar@1.2.5`) als Kamera- und Tracking-
 System durch die **Open-Source-8th-Wall-Engine** (MIT, github.com/8thwall/8thwall)
 im reinen Bildtracking-Modus. Figur, Rig, Animationen, Sound, Dialogsystem,
 Menü-UI, Splash, PoseStabilizer und Gyro-Fusion sind unverändert.
@@ -20,9 +20,9 @@ Regeln, nach denen umgebaut wurde:
 4. **1:1.** Eine Seite = eine Karte = ein Target (`targets/8thwall/card.json`).
 5. **DSGVO / Selbst-Hosting.** Engine unter `vendor/8thwall/` im Repo, relative
    Pfade, kein CDN für 8th Wall, kein API-Key, keine Analytics. Die Engine-
-   Quellen wurden auf Netzaufrufe geprüft (s. u.). three.js kommt weiter vom
-   jsDelivr-CDN wie bisher — wer auch das im Haus haben will, legt
-   `tools/vendor/three.module.js` (liegt schon im Repo) per Importmap um.
+   Quellen wurden auf Netzaufrufe geprüft (s. u.). three.js liegt seit
+   `v2tracker-lean` als schlankes Bundle in `vendor/three/` (kein CDN), seit
+   `v2tracker-prod` per relativem Import ohne Importmap (Abschnitt 7).
 
 ---
 
@@ -261,8 +261,100 @@ das Nötigste reduziert — PNGs bewusst noch nicht (kommt separat):
   müssten für einen A/B nachgezogen werden.
 - Stabilizer-A/B am Gerät (welche der 9 Toggles noch etwas bringen) — dann
   `js/poseStabilizer.js` + `gyroFusion.js` entsprechend kürzen.
-- Figur-PNGs → WebP (−1,5 MB) — bewusst zurückgestellt.
+- ~~Figur-PNGs → WebP~~ — erledigt in `v2tracker-prod` (Abschnitt 7).
 - Ob 8th Wall `detail.scale` bei bewegter Karte wirklich konstant hält (Scale-
   Lock-Annahme) — am Gerät über `Re-Erk.`/„Roh↔Stab" in `?stats` ablesen.
 - Safari-Cache: `vendor/8thwall/*.js` sind groß; bei Engine-Updates Dateinamen
   versionieren oder den Build-Check in `?stats` nutzen.
+
+## 7. Production-Härtung (Branch `v2tracker-prod`, 2026-09-09, Build 50–55)
+
+Ziel: die App läuft auf möglichst vielen Schülerhandys, und wer durchs Raster
+fällt, bekommt eine verständliche Meldung statt einer leeren Seite. Jede
+Änderung ist ein eigener Commit (Build 50–54), Doku = Build 55.
+
+### 7.1 Was gemacht wurde
+
+| # | Maßnahme | Ergebnis |
+|---|---|---|
+| 1 | **Importmap entfernt** — `js/*.js` importieren `../vendor/three/three.module.js` direkt, `OrbitControls.js` importiert `../../three.module.js` (sed in `tools/build-three.sh`); `tools/build-lokal-prototyp.py` bettet three + OrbitControls als normale Module ein (die Import-Map bleibt NUR im Einzeldatei-Export). | Grenze iOS 16.4 / Chrome 89 → iOS 11 / Chrome 63 (Module). Vorher blieb der Splash ohne Knopf stehen. |
+| 2 | **Vorabprüfung** `js/preflight.js` in `boot()` vor dem Freischalten des Buttons: In-App-Browser (UA-Marker, Liste aus `devices/compatibility.ts` der Engine), `isSecureContext`, `mediaDevices.getUserMedia`, `WebAssembly`, WebP-mit-Alpha (Decode-Test). Befund → `#preflightScreen` („Bitte im Browser öffnen", Text je Fall, URL als Textfeld, „Link kopieren" mit Clipboard-API + execCommand-Fallback), `body.preflight-blocked`, Button bleibt aus. Klassisches Inline-Skript (ES5) in `index.html` fängt Browser ohne ES-Module UND ohne `?.`/`??`-Syntax (Parse-Fehler in main.js) mit demselben Bildschirm. Test: `?preflight=inapp\|nocam\|insecure\|nowasm\|nowebp`, `?preflight=aus`. | Kein Gerät mehr ohne Rückmeldung. 2,3 KB gz. |
+| 3 | **Nicht-SIMD-Engine** `vendor/8thwall-nosimd/` (gleicher Monorepo-Commit 519b988, `--config=wasmrelease`, Trim-Patch). `main.js` wählt per `WebAssembly.validate` (Testmodul der Engine-eigenen Prüfung) — der Chunk `xr-tracking.js` lädt relativ zu `xr.js`, also automatisch die passende Variante. Preload des Kerns jetzt per JS in `boot()` (nur die gewählte Variante). `?nosimd` erzwingt den Fallback; `?stats` zeigt „Engine: …"; Konsole „8th Wall XR Version: 0.0.0.0s" (SIMD) / „0.0.0.0" (ohne). Mit wasmtime geprüft: SIMD-Variante ist ohne SIMD schon im Kern `xr.js` ungültig, nicht erst im Tracker. | WASM-SIMD (iOS 16.4 / Chrome 91) ist keine Pflicht mehr; ältere Geräte bekommen den langsameren Tracker statt eines Absturzes nach dem Klick. +1,4 MB gz im Repo, für das Gerät gleich groß. |
+| 4 | **Figur → WebP** 768×1152 (exakt 2:3), Qualität 85, Lanczos auf premultipliziertem Alpha. `rig.js` auf `.webp`, PNGs gelöscht, `dev-server.js` kennt `image/webp`. | 2124 KB → 156 KB (gz 2084 → 148 KB). Neues Gate: WebP mit Alpha = iOS 14 / Chrome 32 (Vorabprüfung fängt es). |
+| 5 | **Tracker-WASM als eigene Datei** — NICHT umgesetzt (s. 7.3). | — |
+| 6 | **Font-Subsetting** mit pyftsubset auf die Zeichen aus `cards/*.js`, `js/*.js`, `index.html`, `css/*.css` + Latin-1 + „“”‚‘’…–—→✅ (Liste `tools/font-subset-unicodes.txt`, Skript `tools/build-fonts.sh`, Original-TTFs nicht im Repo). TTF bleibt TTF, OFL-Texte bleiben, Hinting entfernt (iOS/macOS und Android/Skia werten TrueType-Instruktionen nicht aus; Outlines identisch). | Jersey 10 76,6 → 18,5 KB (gz 26,9 → 7,0), Silkscreen 32,2 → 13,9 KB (gz 11,6 → 4,9). |
+| 7 | **Versionierung/Bundle** — offen gelassen (s. 7.4). | — |
+
+Zusätzlich: CSS `inset: 0` überall mit Vier-Seiten-Fallback (`inset` erst ab
+iOS 14.5 / Chrome 87).
+
+### 7.2 Gate-Tabelle — welche Mindestversionen jetzt gelten
+
+| Voraussetzung | vorher (Build 49) | jetzt (Build 55) | ohne → |
+|---|---|---|---|
+| ES-Module + `import()` | iOS 11 / Chrome 63 | gleich | Hinweis (Inline-Skript) |
+| Import-Map | **iOS 16.4 / Chrome 89** | entfällt | — |
+| JS-Syntax `?.` / `??` (App-Module; Engine ist es2019, three es2020 ohne beides) | iOS 13.4 / Chrome 80 | gleich | Hinweis (Inline-Skript, `new Function`-Probe) |
+| WebAssembly | iOS 11 / Chrome 57 | gleich | Hinweis (preflight) |
+| WASM-SIMD | **iOS 16.4 / Chrome 91, Pflicht** | optional — Fallback `vendor/8thwall-nosimd/` | langsamer, läuft |
+| WebP mit Alpha | — (PNG) | iOS 14 / Chrome 32 | Hinweis (preflight) |
+| `getUserMedia` + HTTPS | iOS 11 / Chrome 53 | gleich | Hinweis (preflight) |
+| In-App-Browser (Instagram, Facebook, Snapchat, TikTok, LinkedIn, X, WeChat, Line, Pinterest) | Kamera-Fehler NACH dem Klick | Hinweis VOR dem Klick + „Link kopieren" | — |
+| CSS `inset` | iOS 14.5 / Chrome 87 | Fallback top/right/bottom/left | — |
+| Gyro-Permission | optional | optional | Tracking ohne Gyro-Brücke |
+
+**Effektive Grenze jetzt: iOS 14 / Safari 14 (alle iPhones ab 6s, Herbst 2020)
+und Chrome 80 (Februar 2020; Chrome aktualisiert sich unabhängig von der
+Android-Version, ab Android 5). Vorher: iOS 16.4 (März 2023) / Chrome 91 (Mai
+2021).** Samsung Internet ≥ 13, Firefox Android ≥ 74 liegen darüber. Unterhalb
+dieser Grenze sieht das Gerät die Meldung „Bitte im Browser öffnen" / „zu alt".
+
+### 7.3 Nicht umgesetzt: Tracker-WASM als eigene `.wasm`-Datei (Aufgabe 5)
+
+`xr-tracking.js` trägt das WASM als Base64 (schlechtere Kompression, kein
+Streaming-Compile). In `reality/app/xr/js/BUILD` steht bei `xr-tracking-wasm`:
+`single_file = select({"@the8thwall//bzl/conditions:wasm-pthread": 0, "//conditions:default": 1})`
+— eine getrennte `.wasm` gibt es nur in der **pthread**-Konfiguration, und die
+setzt `SharedArrayBuffer` voraus, also Cross-Origin-Isolation (Antwort-Header
+COOP/COEP), die **GitHub Pages nicht setzen kann**. Den `select` für die
+Default-Config auf 0 zu drehen wäre ein Eingriff in den Engine-Build, dessen
+`locateFile`-Pfad im Tracker-Chunk (anders als der in `jsxr.ts`) nicht
+verifiziert ist — in der Zeitbox nicht sauber machbar, deshalb bewusst nicht
+halb eingebaut. Wenn später gewünscht: BUILD-`select` anpassen, `locateFile`
+in `tracking-controller.ts` prüfen, beide Varianten bauen, `.wasm` neben die
+`.js` legen (Dev-Server-MIME `application/wasm` ist schon da), im Netzwerk-Tab
+den `.wasm`-Request sehen. Gewinn geschätzt: ~200–300 KB gz + Streaming-Compile.
+
+### 7.4 Offen gelassen: Versionierung / Bundle (Aufgabe 7)
+
+Problem: Safari cached jede Datei einzeln (Pages: max-age 600) → nach einem
+Deploy können alte und neue Module gemischt laufen. Zwei Wege:
+
+- (a) esbuild-Bundle von `js/main.js` mit `--splitting` nach `dist/` (Dev-
+  Module bleiben dynamische Chunks), `index.html` lädt `./dist/main.js?v=BUILD`;
+  `tools/build-app.sh` analog `build-three.sh`. Bricht den Grundsatz „kein
+  Build-Schritt für die App", dafür atomare Deploys.
+- (b) nichts — der Build-Check in `?stats` (v-Nummer + geladene Karte) bleibt
+  die Kontrolle; bei Engine-/Karten-Updates Dateinamen versionieren.
+
+Entscheidung offen (Michael). Bis dahin gilt (b).
+
+### 7.5 Transfer (gzip, Normalpfad Splash → Klick, SIMD-Gerät)
+
+| Posten | vorher (Build 49) | nachher (Build 55) |
+|---|---|---|
+| Splash + App-Module (HTML, CSS, JS, three, Fonts) | 238 KB | 217 KB |
+| Engine SIMD + Target (nach dem Klick) | 1666 KB | 1666 KB (nicht-SIMD: 1431 KB) |
+| Figur (7 Bilder) | 2084 KB | 148 KB |
+| **Summe** | **3988 KB** | **2031 KB** |
+
+Der Engine-Chunk ist damit der einzige große Posten (s. 7.3 für den nächsten
+Hebel).
+
+### 7.6 Am Handy prüfen (Michael)
+
+Testlink https://l77d.github.io/v2tracker/ — `?stats` (Build ≥ 55, Zeile
+„Engine: SIMD"), `?nosimd&stats` (Engine: nicht-SIMD (?nosimd), Tracking muss
+ebenfalls laufen — langsamer), `?preflight=inapp` (Hinweis-Bildschirm, „Link
+kopieren"), Link aus Instagram/WhatsApp öffnen (echter In-App-Fall), Figur
+optisch (WebP-Kanten, Kopf/Gesicht), Sprechblase mit Umlauten.

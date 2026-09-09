@@ -6,13 +6,18 @@ Rückfragen der Figur) mit Sprechblase, Posen und Gesichtsanimation. Kompletter 
 des Zapworks/Mattercraft-Prototyps auf **Open-Source-Tracking** — keine
 Lizenzkosten, kein Build-Schritt, eine einzige statische Website.
 
-**Tracking (Branch `8thwall-image-targets`, 2026-09-09):** 8th Wall Image
+**Tracking (Branch `v2tracker-prod`, 2026-09-09):** 8th Wall Image
 Targets aus der **Open-Source-8th-Wall-Engine** (MIT), selbst gehostet unter
-`vendor/8thwall/` — nur Bildtracking, kein SLAM, kein Niantic-Server, kein
-API-Key. Die Engine startet erst nach „Scan starten". Umstieg, Target-
-Erzeugung und Event-Zuordnung: `docs/8thwall-migration.md`. (`main` läuft
-noch auf MindAR.) Testlink des Branches: https://l77d.github.io/v2tracker/
-(Spiegel-Repo `L77D/v2tracker`, Pages von dessen `main`).
+`vendor/8thwall/` (WASM-SIMD) und `vendor/8thwall-nosimd/` (Fallback für
+ältere Browser, automatisch gewählt) — nur Bildtracking, kein SLAM, kein
+Niantic-Server, kein API-Key. Die Engine startet erst nach „Scan starten";
+vorher prüft `js/preflight.js` In-App-Browser, HTTPS, Kamera-API, WASM und
+WebP und zeigt sonst „Bitte im Browser öffnen" mit „Link kopieren". Umstieg,
+Target-Erzeugung, Event-Zuordnung und die Production-Härtung mit Gate-Tabelle
+(Mindestversionen: **iOS 14 / Chrome 80**): `docs/8thwall-migration.md`.
+(`main` läuft noch auf MindAR.) Testlink des Branches:
+https://l77d.github.io/v2tracker/ (Spiegel-Repo `L77D/v2tracker`, Pages von
+dessen `main`).
 
 **Kein LLM, keine externe API, kein CDN** — alle Inhalte sind autorisiert und
 hartkodiert (`cards/*.js`). Laufzeit-Abhängigkeiten liegen komplett im Repo:
@@ -25,7 +30,9 @@ und MindAR-Targets entfernt.
 
 UI (Build 18, 2026-09-03) nach Figma „DETAR": Blau/Gelb/Schwarz, Pixel-Halo-
 Kästen, Handy-Icon, Eck-Marker. Fonts: Jersey 10 + Silkscreen, beide SIL Open
-Font License (`assets/fonts/`, Lizenztexte daneben).
+Font License (`assets/fonts/`, Lizenztexte daneben; auf die genutzten Zeichen
+gekürzt — `tools/build-fonts.sh`). Figur als WebP mit Alpha
+(`assets/character/`, 768×1152).
 
 ---
 
@@ -64,7 +71,10 @@ dann `http://localhost:8080` öffnen.
 * **`?timeline`** — Theatre.js-Studio (visueller Keyframe-Editor). Für
   Animations-Arbeit am Rechner: `?desktop&dev&timeline`.
 * **`?stats`** — Live-Diagnose am Handy: Tracking-/Gyro-Status, Jitter in mm,
-  Gyro-Toggle. **`?nogyro`** — Gyro-Fusion komplett aus.
+  Gyro-Toggle, Build-Check, Engine-Variante. **`?nogyro`** — Gyro-Fusion
+  komplett aus. **`?nosimd`** — Nicht-SIMD-Engine erzwingen.
+  **`?preflight=inapp|nocam|insecure|nowasm|nowebp`** — Hinweis-Bildschirme
+  der Vorabprüfung ansehen (nur Test).
 
 Flags sind frei kombinierbar (z. B. `?dev&stats` am Handy fürs Tracking-Tuning).
 
@@ -107,8 +117,12 @@ Live-Werte in `js/config.js` — EINE Quelle. Für Tuning-Sessions: Dev-Panel
 2. Import oben in `js/main.js` auf die neue Datei umstellen.
 3. Neues Kartenbild als 8th-Wall-Target erzeugen (s. u.) und die Dateien in
    `targets/8thwall/` ersetzen.
-4. Character-PNGs in `assets/character/` austauschen (gleiches
-   1024×1536-Canvas, gleiche Slicing-Positionen — wie im Nano-Banana-Workflow).
+4. Character-Bilder in `assets/character/` austauschen: aus den 1024×1536-
+   PNGs des Nano-Banana-Workflows (gleiche Slicing-Positionen) WebP mit Alpha
+   in 768×1152 erzeugen (exakt 2:3 — Pivots in `rig.js` sind relativ; Qualität
+   85, Lanczos auf premultipliziertem Alpha, s. Commit „Figur-PNGs → WebP").
+5. Enthalten die neuen Texte Zeichen außerhalb von Latin-1 + „“”‚‘’…–—→✅,
+   Font-Subset neu bauen (`tools/build-fonts.sh`).
 
 ## Tracking-Target (8th Wall) neu erzeugen
 
@@ -142,7 +156,8 @@ halten die Pose bei kurzem Tracking-Verlust. (`filterMinCF`/`filterBeta`/
 index.html            Splash (DU SCANNST … START) + AR-Container + Overlays
 css/app.css           Splash, DET-Logo-Overlay, Tracking-Hinweis, Font
 css/question-menu.css Bottom-UI (Onboarding + Fragen-Karussell), CSS-Dashboard
-js/main.js            Boot, 8th-Wall-Setup (Pipeline-Modul), Figur-Tap, Loop
+js/main.js            Boot, Engine-Variante (SIMD/nicht-SIMD), 8th-Wall-Setup (Pipeline-Modul), Figur-Tap, Loop
+js/preflight.js       Vorabprüfung im Splash (In-App-Browser, HTTPS, Kamera-API, WASM, WebP)
 js/desktopMode.js     ?desktop: Karte als Boden-Plane, Maus-Orbit (nur per Flag geladen)
 js/config.js          ALLE Tuning-Dashboards + tuning.json-Merge
 js/rig.js             Figuren-Hierarchie (Transforms aus Scene.zcomp)
@@ -159,9 +174,11 @@ js/questionMenu.js    Onboarding + Dialog-Menü: Themenkarten, Fragen mit Marken
                       Antwortoptionen, Weiter, Fußzeile (DOM, Karussell)
 js/debugOverlay.js    pinke Hilfslinien (?debug)
 cards/                ein .js pro Beruf (Inhalte, hartkodiert)
-assets/               Character-PNGs, Logos, Font, Kartenbild
+assets/               Character-WebPs, Logos, Fonts (Subset), Kartenbild
 targets/8thwall/      Image-Target (card.json + card_luminance.png) aus image-target-cli
-vendor/8thwall/       Open-Source-8th-Wall-Engine, zugeschnitten (xr.js + xr-tracking.js, MIT)
+vendor/8thwall/       Open-Source-8th-Wall-Engine, zugeschnitten (xr.js + xr-tracking.js, MIT, WASM-SIMD)
+vendor/8thwall-nosimd/ dieselbe Engine ohne WASM-SIMD (Fallback, main.js wählt automatisch)
+tools/build-fonts.sh  Font-Subset (pyftsubset) aus den Original-TTFs
 vendor/three/         three.js 0.160, tree-shaken (tools/build-three.sh)
 docs/8thwall-migration.md  Umstieg MindAR → 8th Wall: Target-Erzeugung, Änderungen, Events
 ```
@@ -189,5 +206,8 @@ docs/8thwall-migration.md  Umstieg MindAR → 8th Wall: Target-Erzeugung, Änder
   hochziehen; `XR8.Threejs` braucht das globale THREE ≥ r125 und dieselbe
   Instanz wie unsere Module (`window.THREE = THREE` in main.js). Neue
   `THREE.*`-Klasse im Code → `tools/three-slim-entry.js` + `tools/build-three.sh`.
+* **Kompatibilität:** keine Importmap, keine JS-Syntax jenseits `?.`/`??` im
+  Live-Code, Bilder als WebP, neues CSS mit Fallback — Gate-Tabelle und
+  Begründung in `docs/8thwall-migration.md` Abschnitt 7.
 
 © Studio2B — Demo. Logos: DEIN ERSTER TAG / PENNY (mit Erlaubnis).

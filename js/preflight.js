@@ -12,12 +12,14 @@
    • insecure — kein HTTPS (getUserMedia gibt es nur im Secure Context).
    • nocam    — keine Kamera-API (sehr alter Browser, Kiosk-Modus, WebView).
    • nowasm   — kein WebAssembly (die Engine ist WASM).
+   • nowebp   — kein WebP mit Alpha (Figur-Bilder seit 2026-09-09; Safari vor
+                iOS 14) — einziger asynchroner Test (Bild-Decode), läuft zuletzt.
 
    Kein ES-Modul-Support ist hier NICHT prüfbar (dann läuft main.js gar nicht)
    — dafür steht ein klassisches Inline-Skript in index.html, das denselben
    Bildschirm befüllt.
 
-   Nur zum Testen: URL-Parameter ?preflight=inapp|nocam|insecure|nowasm erzwingt
+   Nur zum Testen: URL-Parameter ?preflight=inapp|nocam|insecure|nowasm|nowebp erzwingt
    den jeweiligen Fall (Screens am Rechner ansehen), ?preflight=aus überspringt
    die Prüfung.
    ============================================================================= */
@@ -48,12 +50,27 @@ const TEXT = {
     title: "Bitte im Browser öffnen",
     text: "Dein Browser ist zu alt für die Bilderkennung. Öffne den Link in einem aktuellen Safari (iPhone) bzw. Chrome (Android).",
   },
+  nowebp: {
+    title: "Bitte im Browser öffnen",
+    text: "Dein Browser ist zu alt, um die Figur anzuzeigen. Aktualisiere ihn (iPhone: iOS 14 oder neuer) oder öffne den Link in einem aktuellen Chrome.",
+  },
 };
+
+/* WebP mit Alpha per Decode-Test (1×1-Bild aus der WebP-FAQ von Google; Safari
+   kann WebP erst ab iOS 14). Liefert true/false, nie eine Ausnahme. */
+function webpAlphaSupported() {
+  return new Promise((resolve) => {
+    const im = new Image();
+    im.onload = () => resolve(im.width === 1 && im.height === 1);
+    im.onerror = () => resolve(false);
+    im.src = "data:image/webp;base64,UklGRkoAAABXRUJQVlA4WAoAAAAQAAAAAAAAAAAAQUxQSAwAAAARBxAR/Q9ERP8DAABWUDggGAAAABQBAJ0BKgEAAQAAAP4AAA3AAP7mtQAAAA==";
+  });
+}
 
 /* Prüfen. `force` = Wert von ?preflight (nur Test). Liefert den Befund-Schlüssel
    oder null (alles in Ordnung). Reihenfolge = Handlungsnähe: In-App zuerst
    (der Nutzer kann es sofort beheben), dann HTTPS, Kamera-API, WASM. */
-export function preflight(force) {
+export async function preflight(force) {
   if (force === "aus") return null;
   if (force && TEXT[force]) return force;
   const ua = navigator.userAgent || "";
@@ -61,6 +78,7 @@ export function preflight(force) {
   if (!window.isSecureContext) return "insecure";
   if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) return "nocam";
   if (!window.WebAssembly) return "nowasm";
+  if (!(await webpAlphaSupported())) return "nowebp";
   return null;
 }
 

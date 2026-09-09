@@ -106,8 +106,8 @@ let gyro = null; // GyroFusion — wird in der START-Geste angelegt (iOS-Permiss
 async function boot() {
   // Vorabprüfung (2026-09-09): In-App-Browser / kein HTTPS / keine Kamera-API /
   // kein WASM → Hinweis-Bildschirm statt Fehler nach dem Klick; Button bleibt
-  // aus. Test: ?preflight=inapp|nocam|insecure|nowasm (s. js/preflight.js).
-  const blocked = preflight(params.get("preflight"));
+  // aus. Test: ?preflight=inapp|nocam|insecure|nowasm|nowebp (s. js/preflight.js).
+  const blocked = await preflight(params.get("preflight"));
   if (blocked) {
     el("cardName").textContent = card.profession;
     showPreflightScreen(blocked);

@@ -1,6 +1,6 @@
 # CLAUDE.md — DETAR WebAR
 
-Stand: 2026-09-09 · Build 49 (Branch `v2tracker-lean`: Tracking auf 8th Wall + Entschlackung) · Live (main, Build 33, MindAR): https://l77d.github.io/detar
+Stand: 2026-09-09 · Build 55 (Branch `v2tracker-prod`: 8th Wall + Entschlackung + Production-Härtung) · Testlink: https://l77d.github.io/v2tracker/ · Live (main, Build 33, MindAR): https://l77d.github.io/detar
 
 ## Projekt
 
@@ -116,11 +116,16 @@ Physische Karte: **59 × 91 mm hochkant** (Michael 2026-09-07) →
 in `?stats` (Jitter-Richtwerte unten gelten weiter in mm); die Figur ist
 relativ zur Kartenbreite definiert und wird dadurch nicht kleiner.
 
-**Stack (Branch `8thwall-image-targets`, 2026-09-09):** `three@0.160` per
-CDN-Importmap (gepinnt) + **Open-Source-8th-Wall-Engine** (MIT) selbst gehostet
-unter `vendor/8thwall/` (`xr.js` + `xr-tracking.js`; Bildtracker, KEIN SLAM,
-kein Binary, kein Niantic-Aufruf, kein API-Key). Engine wird erst in der Start-
-Geste geladen. Target: `targets/8thwall/card.json` + `card_luminance.png` aus
+**Stack (seit 2026-09-09):** `three@0.160` als schlankes Bundle in
+`vendor/three/` (relativer Import `../vendor/three/three.module.js`, KEINE
+Importmap mehr) + **Open-Source-8th-Wall-Engine** (MIT) selbst gehostet unter
+`vendor/8thwall/` (SIMD) und `vendor/8thwall-nosimd/` (Fallback; `main.js`
+wählt per `WebAssembly.validate`, `?nosimd` erzwingt) — `xr.js` +
+`xr-tracking.js`; Bildtracker, KEIN SLAM, kein Binary, kein Niantic-Aufruf,
+kein API-Key. Engine wird erst in der Start-Geste geladen; `js/preflight.js`
+prüft vorher In-App-Browser/HTTPS/Kamera-API/WASM/WebP und zeigt sonst
+`#preflightScreen`. Production-Härtung + Gate-Tabelle:
+`docs/8thwall-migration.md` Abschnitt 7. Target: `targets/8thwall/card.json` + `card_luminance.png` aus
 `@8thwall/image-target-cli`. Alles dazu: `docs/8thwall-migration.md`.
 `main` läuft weiter auf `mind-ar@1.2.5` (dort: mind-ar ist gegen three 0.160
 gebaut, nicht bumpen). Vanilla ES-Module, GitHub Pages (served NUR `main`).
@@ -128,11 +133,14 @@ gebaut, nicht bumpen). Vanilla ES-Module, GitHub Pages (served NUR `main`).
 ## Branches
 
 - `main` — live (Pages deployt automatisch)
-- `v2tracker-lean` — auf `8thwall-image-targets` aufgesetzt: Entschlackung
-  (2026-09-09, Michael am Handy: Tracker „deutlich besser als MindAR"). Das ist
-  der Stand für den Merge. **Testdeployment:** Spiegel-Repo `L77D/v2tracker`
-  (Branch → dessen `main`) → https://l77d.github.io/v2tracker/ — nach jedem
-  Push nachziehen: `git push <v2tracker-remote> v2tracker-lean:main`.
+- `v2tracker-prod` — auf `v2tracker-lean` aufgesetzt: Production-Härtung
+  (2026-09-09, Build 50–55: Importmap raus, Vorabprüfung, Nicht-SIMD-Engine,
+  WebP, Font-Subsetting). **Das ist der Stand für den Merge.**
+  **Testdeployment:** Spiegel-Repo `L77D/v2tracker` (Branch → dessen `main`)
+  → https://l77d.github.io/v2tracker/ — nach jedem Push nachziehen:
+  `git push https://github.com/L77D/v2tracker.git v2tracker-prod:main`.
+- `v2tracker-lean` — Entschlackung (Build 49; Michael am Handy: Tracker
+  „deutlich besser als MindAR"). Referenz.
 - `8thwall-image-targets` — Tracking auf 8th Wall Image Targets, Stand vor der
   Entschlackung (Build 48). Bleibt als Referenz.
 - `pruefstand` — Strategie E: `?record` / `?replay` / `?metrics`
@@ -156,6 +164,16 @@ gebaut, nicht bumpen). Vanilla ES-Module, GitHub Pages (served NUR `main`).
   `tools/three-slim-entry.js` + `tools/build-three.sh`); Engine-Kern ohne
   Framework-Adapter (`vendor/8thwall/BUILD-INFO.txt`); keine toten Assets
   (Einblick/Portal, MindAR-Targets, Lokal-Vendor sind raus).
+- **Kompatibilitäts-Regeln (v2tracker-prod, 2026-09-09):** KEINE Importmap
+  (Import-Maps = iOS 16.4) — Vendor-Module relativ importieren. Im Live-Code
+  keine Syntax jenseits `?.`/`??` (Grenze iOS 13.4 / Chrome 80; `??=`, `#priv`,
+  `.at()` o. ä. nur in Dev-Modulen). Bilder als WebP mit Alpha (Grenze iOS 14).
+  Neues CSS mit Fallback (`inset` → top/right/bottom/left). Engine-Update
+  immer BEIDE Varianten bauen (`wasmreleasesimd` → `vendor/8thwall/`,
+  `wasmrelease` → `vendor/8thwall-nosimd/`, s. `vendor/8thwall/README.md`).
+  Neue Zeichen in Karten-Texten → `tools/build-fonts.sh` (Font-Subset,
+  Original-TTFs von Google Fonts). Vollständige Gate-Tabelle:
+  `docs/8thwall-migration.md` 7.2.
 - **Lokal-Prototyp (Einzeldatei, Doppelklick, kein Server):**
   `python3 tools/build-lokal-prototyp.py <Ziel.html>` packt die App in eine
   HTML-Datei (Module als data:-URLs in der Import-Map, Assets/Fonts/tuning.json
@@ -224,9 +242,12 @@ Delta vor) als Prediction + Verlust-Brücke.
 
 ## URL-Parameter
 
-`?stats` (Jitter roh/stab, Vision-Hz, BEWEGT/ruhig, Cam+PR, Build-Check) ·
-`?dev` (Regler) · `?debug` · `?desktop` · `?timeline` · `?nogyro` ·
-`?res=WxH` / `?res=0` · Branch pruefstand: `?record`, `?replay`, `?metrics`.
+`?stats` (Jitter roh/stab, Vision-Hz, BEWEGT/ruhig, Cam+PR, Build-Check,
+Engine-Variante) · `?dev` (Regler) · `?debug` · `?desktop` · `?timeline` ·
+`?nogyro` · `?nosimd` (Nicht-SIMD-Engine erzwingen) ·
+`?preflight=inapp|nocam|insecure|nowasm|nowebp` (Hinweis-Screens erzwingen),
+`?preflight=aus` · `?res=WxH` / `?res=0` (ohne Wirkung unter 8th Wall) ·
+Branch pruefstand: `?record`, `?replay`, `?metrics`.
 
 ## Qualitäts-Richtwerte (?stats, Ruhe, 3–5 s Fenster füllen lassen)
 
@@ -239,6 +260,13 @@ Delta vor) als Prediction + Verlust-Brücke.
 
 ## Gotchas
 
+- Production-Härtung: Der Claude-Browser-Pane meldet im verdeckten Zustand
+  Viewport 0×0 und pausiert rAF (Intro-Choreo hängt bei `phase: intro`) —
+  kein CSS-Fehler; `?desktop&dev` per JS-Klick + `controller.onCardTapped()`
+  treiben. Port 8743 kann von einem alten Dev-Server belegt sein → anderen
+  Port nehmen, nicht killen. Im Handy-Preset des Panes liefert die Engine
+  `UNSPECIFIED` statt `DENY_CAMERA` (dann kein `body.camera-denied`) — Desktop-
+  Preset nehmen. `?preflight=…` überspringt boot() komplett (kein Dev-Panel).
 - 8th Wall: `disableWorldTracking: true` MUSS vor `XrController.pipelineModule()`
   und `XR8.run()` stehen. `XR8.Threejs` verlangt `window.THREE` (dieselbe
   Instanz wie die Importmap). `renderer.setSize` der Engine schreibt Pixelmaße

@@ -156,16 +156,23 @@
   </div>
 
   <!-- Klassisches Skript (KEIN Modul, ES5): Browser ohne ES-Modul-Support
-       (vor iOS 11 / Chrome 61) führen js/main.js nie aus — der Splash bliebe
-       ohne Knopf stehen. Hier bekommt so ein Gerät den Hinweis-Bildschirm.
-       `noModule` gibt es genau in den Browsern, die Module können. -->
+       (vor iOS 11 / Chrome 61) führen js/main.js nie aus, und Browser ohne
+       Optional Chaining / Nullish Coalescing (`?.` / `??`, vor iOS 13.4 /
+       Chrome 80) brechen beim PARSEN von main.js ab — in beiden Fällen bliebe
+       der Splash ohne Knopf stehen. Hier bekommt so ein Gerät den Hinweis-
+       Bildschirm. `noModule` gibt es genau in den Browsern, die Module können;
+       die Syntax-Probe läuft über new Function, damit dieses Skript selbst
+       ES5 bleibt. -->
   <script>
-    if (!("noModule" in HTMLScriptElement.prototype)) {
+    (function () {
+      var ok = "noModule" in HTMLScriptElement.prototype;
+      if (ok) { try { new Function("var a; return a?.b ?? 0"); } catch (e) { ok = false; } }
+      if (ok) return;
       document.getElementById("pfText").textContent =
         "Dein Browser ist zu alt für diese App. Aktualisiere ihn oder öffne den Link in einem aktuellen Safari (iPhone) bzw. Chrome (Android).";
       document.getElementById("pfUrl").value = location.href;
       document.body.className += " preflight-blocked";
-    }
+    })();
   </script>
   <script type="module" src="./js/main.js"></script>
 </body>
