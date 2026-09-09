@@ -31,6 +31,14 @@ function makeSprite(url, aspectW, aspectH, renderOrder) {
   return m;
 }
 
+// Figur-Bilder als WebP mit Alpha (Production-Härtung 2026-09-09): 768×1152 px
+// statt PNG 1024×1536 (2124 KB → 156 KB gesamt; Qualität 85, Lanczos auf
+// premultipliziertem Alpha, damit keine dunklen Säume entstehen). Das
+// Seitenverhältnis 2:3 ist EXAKT beibehalten — die Plane-Maße unten (1024:1536)
+// und alle Pivots sind relativ, sonst verrutschen Kopf und Gesicht. Die Figur
+// ist am Handy nie größer als ~400 px, 768 px reichen für Retina. WebP mit
+// Alpha: Safari ab iOS 14, Chrome ab 32 — unter der Modul-Grenze (iOS 11) liegt
+// nur iOS 11–13, dort bliebe die Figur unsichtbar (bewusst hingenommen).
 const A = "./assets/character/";
 
 /* Baut das komplette Rig unter `parent` und liefert alle Knoten zurück. */
@@ -50,9 +58,9 @@ export function buildRig(parent) {
   BodyPivot.position.set(0, -0.4897775782082088, 0);
   FigureRoot.add(BodyPivot);
 
-  const BodyIdle   = makeSprite(A + "body_idle.png",         1024, 1536, 0);
-  const BodyAffirm = makeSprite(A + "body_react_affirm.png", 1024, 1536, 0);
-  const BodyThink  = makeSprite(A + "body_react_think.png",  1024, 1536, 0);
+  const BodyIdle   = makeSprite(A + "body_idle.webp",         1024, 1536, 0);
+  const BodyAffirm = makeSprite(A + "body_react_affirm.webp", 1024, 1536, 0);
+  const BodyThink  = makeSprite(A + "body_react_think.webp",  1024, 1536, 0);
   for (const b of [BodyIdle, BodyAffirm, BodyThink]) {
     b.position.set(0, 0.5, 0);
     BodyPivot.add(b);
@@ -70,12 +78,12 @@ export function buildRig(parent) {
   const HEAD_Y0 = -0.1157760907793379;
   const FACE_Y0 = -0.11886690574041192;
 
-  const Head = makeSprite(A + "head.png", 1024, 1536, 1);
+  const Head = makeSprite(A + "head.webp", 1024, 1536, 1);
   HeadNod.add(Head);
 
-  const FaceNeutral = makeSprite(A + "face_neutral.png", 1024, 1536, 2);
-  const FaceBlink   = makeSprite(A + "face_blink.png",   1024, 1536, 2);
-  const FaceTalk    = makeSprite(A + "face_talk.png",    1024, 1536, 2);
+  const FaceNeutral = makeSprite(A + "face_neutral.webp", 1024, 1536, 2);
+  const FaceBlink   = makeSprite(A + "face_blink.webp",   1024, 1536, 2);
+  const FaceTalk    = makeSprite(A + "face_talk.webp",    1024, 1536, 2);
   HeadNod.add(FaceNeutral, FaceBlink, FaceTalk);
 
   const nodes = {
