@@ -1,6 +1,6 @@
 # CLAUDE.md — DETAR WebAR
 
-Stand: 2026-09-09 · Build 55 (Branch `v2tracker-prod`: 8th Wall + Entschlackung + Production-Härtung) · Testlink: https://l77d.github.io/v2tracker/ · Live (main, Build 33, MindAR): https://l77d.github.io/detar
+Stand: 2026-09-09 · Build 56 (Branch `v2tracker-prod`: 8th Wall + Entschlackung + Production-Härtung + Editionen ?public) · Testlink: https://l77d.github.io/v2tracker/ · Live (main, Build 33, MindAR): https://l77d.github.io/detar
 
 ## Projekt
 
@@ -56,6 +56,21 @@ Eck-Marker · Karte verloren = Menü eingefroren, nicht bedienbar.
 - **Ohne Entwurf, abgeleitet** (Michael liefert später Mockups nach):
   Antwortoptionen, Weiter-Kachel, Ruhezustand, Kamera-abgelehnt, Firmenname-
   Text-Fallback im Splash, Seitenzähler, NEU-Punkt am Zurückpfeil.
+
+## Editionen (seit Build 56, 2026-09-09)
+
+Eine Karte, zwei Fassungen: **Firma** (Standard: Logo/Firmenname im Splash,
+Link-Frage „Zeig mir die Seite" im Thema „Wie man reinkommt") und **Public**
+per URL-Flag `?public` (QR-Code der neutralen Karte). `js/edition.js →
+prepareCard()` liefert main.js eine Kopie der Karte: Fragen mit `branded: true`
+entfallen samt Ids in `initial`/`unlocks`; `{firma}` in Texten wird durch
+`card.company` bzw. `card.companyNeutral` („der Betrieb") ersetzt; `company`,
+`companyLogo`, `jobUrl` sind null; `card.edition` = "public". Splash: `body.public`
+blendet `#companyKicker` („bei") + `.company-box` aus — dort steht vorerst
+NICHTS (Michael 2026-09-09: Public-Splash wird noch gestaltet). `?stats` zeigt
+in der Karten-Zeile „PUBLIC"/„Firma". Keine zweite Kartendatei, kein zweites
+HTML. Der Parameter überlebt „Neu laden" und „Link kopieren" (preflight.js
+arbeitet am rohen Query-String, damit `?public` nicht zu `public=` wird).
 
 ## Dialogsystem (seit Build 17, 2026-09-03)
 
@@ -244,7 +259,8 @@ Delta vor) als Prediction + Verlust-Brücke.
 
 `?stats` (Jitter roh/stab, Vision-Hz, BEWEGT/ruhig, Cam+PR, Build-Check,
 Engine-Variante) · `?dev` (Regler) · `?debug` · `?desktop` · `?timeline` ·
-`?nogyro` · `?nosimd` (Nicht-SIMD-Engine erzwingen) ·
+`?nogyro` · `?nosimd` (Nicht-SIMD-Engine erzwingen) · `?public` (Public-Edition,
+kein Test-Flag — steht im QR-Code der neutralen Karte) ·
 `?preflight=inapp|nocam|insecure|nowasm|nowebp` (Hinweis-Screens erzwingen),
 `?preflight=aus` · `?res=WxH` / `?res=0` (ohne Wirkung unter 8th Wall) ·
 Branch pruefstand: `?record`, `?replay`, `?metrics`.

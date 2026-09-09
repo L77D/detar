@@ -35,7 +35,8 @@
    1/cardWidth lässt alle getunten Werte (Lauffeld, Bubble, Sprünge …) gelten.
    ============================================================================= */
 import * as THREE from "../vendor/three/three.module.js";
-import { card } from "../cards/elektroniker.js";
+import { card as cardData } from "../cards/elektroniker.js";
+import { prepareCard } from "./edition.js";
 import { SCENE, STAB, CAM, CHOREO, GYRO, loadTuning, syncCssVars } from "./config.js";
 import { buildRig } from "./rig.js";
 import { FaceAnimator } from "./faceAnimator.js";
@@ -53,6 +54,13 @@ import { preflight, showPreflightScreen } from "./preflight.js";
 
 const params = new URLSearchParams(location.search);
 const DESKTOP_MODE = params.has("desktop");
+// Edition (Michael 2026-09-09): ?public = neutrale Fassung ohne Firmenlogo/
+// -name im Splash und ohne Link-Frage im Dialog (js/edition.js). Standard =
+// Firmenversion, damit gedruckte QR-Codes gültig bleiben. Der Parameter muss
+// auf allen Wegen erhalten bleiben (Neu laden, „Link kopieren" — beides
+// behält die Query).
+const PUBLIC_MODE = params.has("public");
+const card = prepareCard(cardData, { publicMode: PUBLIC_MODE });
 // Debug NUR per URL (?debug) — SCENE.debug aus einem Preset wird bewusst
 // ignoriert (Leftover aus Tuning-Sessions soll nie live erscheinen).
 const DEBUG_MODE = params.has("debug");
@@ -139,10 +147,14 @@ async function boot() {
   if (params.has("stats")) ({ StatsOverlay } = await import("./statsOverlay.js"));
 
   el("cardName").textContent = card.profession;
-  // Firmenlogo nur, wenn die Karte eines mitbringt — sonst der Name als Text
+  // Firmenlogo nur, wenn die Karte eines mitbringt — sonst der Name als Text.
+  // Public-Edition: der ganze Block „bei + Logo/Firma" bleibt weg (body.public;
+  // der Public-Splash wird noch gestaltet — Michael 2026-09-09).
   const logoImg = el("companyLogo"), companyText = el("companyText");
-  if (card.companyLogo) { logoImg.src = card.companyLogo; logoImg.alt = card.company; companyText.hidden = true; }
+  if (PUBLIC_MODE) { document.body.classList.add("public"); logoImg.hidden = true; companyText.hidden = true; }
+  else if (card.companyLogo) { logoImg.src = card.companyLogo; logoImg.alt = card.company; companyText.hidden = true; }
   else { logoImg.hidden = true; companyText.textContent = card.company ?? ""; }
+  console.log("DETAR Edition:", card.edition, "· Fragen:", card.questions.length);
   // (DET-Logo mit Job-Link nach dem Splash: seit dem UI-Update 2026-09-03 raus)
 
   // Font muss VOR dem ersten Bubble-measureText geladen sein.

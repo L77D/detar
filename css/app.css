@@ -327,6 +327,9 @@ body.launched .splash { display: none; }
   text-wrap: balance;
 }
 .company-box > img[hidden], .company-text[hidden] { display: none; }
+/* Public-Edition (?public, 2026-09-09): kein „bei", kein Logo/Firmenname —
+   Platz bleibt vorerst leer, der Public-Splash wird noch gestaltet. */
+body.public #companyKicker, body.public .company-box { display: none; }
 
 /* Start-CTA (Figma 448:1141: 294×88, Rand 7, Schattenblock −9/+8) */
 .splash-cta {

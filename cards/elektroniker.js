@@ -20,6 +20,9 @@ export const card = {
   profession: "Elektroniker/in für Betriebstechnik",
   company: "Siemens",
   companyLogo: null,   // kein Logo → Firmenname als Text im Splash
+  // Public-Edition (?public, 2026-09-09): neutrale Form für {firma} in Texten;
+  // Splash zeigt keine Firma, Fragen mit `branded: true` entfallen (js/edition.js)
+  companyNeutral: "der Betrieb",
   npc: "Jonas · 2. Lehrjahr",
   // Ausbildungsseite (seit Build 18 kein DET-Label mehr; der Link läuft über die
   // Frage „link" im Thema „Wie man reinkommt", siehe unten)
@@ -161,8 +164,9 @@ export const card = {
     /* --- externer Link: Ausbildungsseite (Reiter LINK, öffnet nach „Seite
        öffnen" in einem neuen Tab). Erscheint erst, nachdem die Figur bei
        „Wie bewirbt man sich?" auf die Seite verwiesen hat — dezent, im
-       Kontext, nicht als Aufforderung. ------------------------------------- */
-    { id: "link", thema: "wege", label: "Zeig mir die Seite", tag: "zeigen", link: true,
+       Kontext, nicht als Aufforderung. `branded: true` = nur in der
+       Firmen-Edition; mit ?public entfällt die Frage samt Freischaltung. --- */
+    { id: "link", thema: "wege", label: "Zeig mir die Seite", tag: "zeigen", link: true, branded: true,
       url: "https://www.ausbildung.siemens.com/offer/elektroniker-w-m-d-fur-betriebstech/21edd4e8-bc72-47bd-8846-689054d2832e?showApplicationForm=false",
       text: "Ich mach dir die Seite auf. Da steht das Offizielle drin — Voraussetzungen, Ansprechpartner, alles Aktuelle." },
 

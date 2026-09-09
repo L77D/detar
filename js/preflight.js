@@ -90,10 +90,12 @@ export function showPreflightScreen(kind) {
   el("pfTitle").textContent = t.title;
   el("pfText").textContent = t.text;
   // Link ohne den Test-Parameter — das ist die Adresse, die der Nutzer im
-  // Browser braucht.
+  // Browser braucht. Bewusst am rohen Query-String gearbeitet, nicht über
+  // URLSearchParams: das würde wertlose Flags wie ?public zu „public="
+  // umschreiben (Edition-Flag, 2026-09-09).
   const u = new URL(location.href);
-  u.searchParams.delete("preflight");
-  const link = u.href;
+  const q = u.search.replace(/^\?/, "").split("&").filter((p) => p && !/^preflight(=|$)/.test(p)).join("&");
+  const link = u.origin + u.pathname + (q ? "?" + q : "") + u.hash;
   el("pfUrl").value = link;
   el("pfCopy").onclick = () => copyLink(link, el("pfUrl"), el("pfCopy"));
   document.body.classList.add("preflight-blocked");

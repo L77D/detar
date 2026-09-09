@@ -19,6 +19,13 @@ Target-Erzeugung, Event-Zuordnung und die Production-Härtung mit Gate-Tabelle
 https://l77d.github.io/v2tracker/ (Spiegel-Repo `L77D/v2tracker`, Pages von
 dessen `main`).
 
+**Zwei Editionen pro Karte:** Firmenversion (Standard) mit Logo/Firmenname im
+Splash und Link zur Ausbildungsseite im Dialog, und die neutrale Public-
+Version über das URL-Flag **`?public`** (im QR-Code der Public-Karte): kein
+Firmenblock im Splash, Fragen mit `branded: true` entfallen, `{firma}` in
+Texten wird neutral („der Betrieb"). Eine Kartendatei für beides
+(`js/edition.js`).
+
 **Kein LLM, keine externe API, kein CDN** — alle Inhalte sind autorisiert und
 hartkodiert (`cards/*.js`). Laufzeit-Abhängigkeiten liegen komplett im Repo:
 three.js 0.160 als schlankes Bundle (`vendor/three/`, tree-shaken auf die
@@ -74,7 +81,8 @@ dann `http://localhost:8080` öffnen.
   Gyro-Toggle, Build-Check, Engine-Variante. **`?nogyro`** — Gyro-Fusion
   komplett aus. **`?nosimd`** — Nicht-SIMD-Engine erzwingen.
   **`?preflight=inapp|nocam|insecure|nowasm|nowebp`** — Hinweis-Bildschirme
-  der Vorabprüfung ansehen (nur Test).
+  der Vorabprüfung ansehen (nur Test). **`?public`** — Public-Edition (kein
+  Test-Flag, steht im QR-Code der neutralen Karte).
 
 Flags sind frei kombinierbar (z. B. `?dev&stats` am Handy fürs Tracking-Tuning).
 
@@ -113,7 +121,10 @@ Live-Werte in `js/config.js` — EINE Quelle. Für Tuning-Sessions: Dev-Panel
 1. `cards/elektroniker.js` kopieren, Texte/Fragen/Rückfragen/Link ändern
    (Datenmodell und Regeln: `Dialogsystem/DETAR_Dialogsystem.md` im Projekt-
    ordner; Emotion-Tags aus dem geschlossenen Vokabular, Highlight-Tags
-   `<marker> <gross> <leise> <knall>`).
+   `<marker> <gross> <leise> <knall>`). Firmenbezug nur über `company`,
+   `companyLogo`, `companyNeutral`, `{firma}` in Texten und `branded: true`
+   an Fragen, die es nur in der Firmenversion gibt — dann funktioniert
+   `?public` ohne zweite Datei.
 2. Import oben in `js/main.js` auf die neue Datei umstellen.
 3. Neues Kartenbild als 8th-Wall-Target erzeugen (s. u.) und die Dateien in
    `targets/8thwall/` ersetzen.
@@ -158,6 +169,7 @@ css/app.css           Splash, DET-Logo-Overlay, Tracking-Hinweis, Font
 css/question-menu.css Bottom-UI (Onboarding + Fragen-Karussell), CSS-Dashboard
 js/main.js            Boot, Engine-Variante (SIMD/nicht-SIMD), 8th-Wall-Setup (Pipeline-Modul), Figur-Tap, Loop
 js/preflight.js       Vorabprüfung im Splash (In-App-Browser, HTTPS, Kamera-API, WASM, WebP)
+js/edition.js         Edition Firma/Public (?public): Karte filtern, {firma} ersetzen
 js/desktopMode.js     ?desktop: Karte als Boden-Plane, Maus-Orbit (nur per Flag geladen)
 js/config.js          ALLE Tuning-Dashboards + tuning.json-Merge
 js/rig.js             Figuren-Hierarchie (Transforms aus Scene.zcomp)

@@ -358,3 +358,18 @@ Testlink https://l77d.github.io/v2tracker/ — `?stats` (Build ≥ 55, Zeile
 ebenfalls laufen — langsamer), `?preflight=inapp` (Hinweis-Bildschirm, „Link
 kopieren"), Link aus Instagram/WhatsApp öffnen (echter In-App-Fall), Figur
 optisch (WebP-Kanten, Kopf/Gesicht), Sprechblase mit Umlauten.
+
+## 8. Editionen: Firma / Public (`?public`, Build 56, 2026-09-09)
+
+Zwei Fassungen derselben Karte: Firmenkunden (Logo/Firmenname im Splash,
+Link-Frage im Dialog) und Public (neutral). Umschalter ist das URL-Flag
+`?public` im QR-Code; Standard bleibt die Firmenversion, damit gedruckte
+Codes gültig bleiben. Umsetzung in `js/edition.js` (`prepareCard`): Kopie der
+Karte ohne `branded: true`-Fragen (Ids auch aus `initial`/`unlocks`
+gestrichen — kein hängender NEU-Punkt), `{firma}` → `companyNeutral`,
+`company/companyLogo/jobUrl` null, `edition: "public"`; Splash blendet über
+`body.public` den Block „bei + Firma" aus (vorerst leer, Public-Splash wird
+noch gestaltet). `?stats` zeigt „PUBLIC"/„Firma". Geprüft am Rechner
+(`?public&desktop&dev`): Splash ohne Firma, Thema „Wie man reinkommt" nach
+„Wie bewirbt man sich?" ohne LINK-Kachel; ohne Flag unverändert (LINK-Kachel
+mit NEU). `?public` bleibt bei „Link kopieren" und „Neu laden" erhalten.

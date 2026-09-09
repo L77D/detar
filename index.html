@@ -119,7 +119,9 @@
     <div class="splash-center">
       <p class="splash-kicker">Du scannst</p>
       <h1 class="card-name px-title" id="cardName">…</h1>
-      <p class="splash-kicker">bei</p>
+      <!-- „bei + Firma": in der Public-Edition (?public) komplett ausgeblendet
+           (body.public, css/app.css) — der Public-Splash wird noch gestaltet -->
+      <p class="splash-kicker" id="companyKicker">bei</p>
       <div class="company-box">
         <!-- Logo aus der Karte (card.companyLogo) oder Firmenname als Text -->
         <img id="companyLogo" src="" alt="" />
