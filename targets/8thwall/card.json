@@ -1,0 +1,25 @@
+{
+  "imagePath": "targets/8thwall/card_luminance.png",
+  "metadata": {
+    "quelle": "Assets/September/demo_skat_070926_mind_cropped.png (1346×2156), image-target-cli 1.0.0, Standard-Crop 3:4 zentriert, 2026-09-09"
+  },
+  "name": "card",
+  "type": "PLANAR",
+  "properties": {
+    "left": 0,
+    "top": 181,
+    "width": 1346,
+    "height": 1795,
+    "isRotated": false,
+    "originalWidth": 1346,
+    "originalHeight": 2156
+  },
+  "resources": {
+    "originalImage": "card_original.png",
+    "croppedImage": "card_cropped.png",
+    "thumbnailImage": "card_thumbnail.png",
+    "luminanceImage": "card_luminance.png"
+  },
+  "created": 1788940676936,
+  "updated": 1788940676936
+}

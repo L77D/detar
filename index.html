@@ -6,17 +6,24 @@
   <title>DEIN ERSTER TAG — AR</title>
   <link rel="stylesheet" href="./css/app.css" />
   <link rel="stylesheet" href="./css/question-menu.css" />
-  <!-- Abhängigkeiten per CDN (kein Build-Schritt). Versionen sind GEPINNT —
-       nicht auf "latest" ändern, mind-ar 1.2.5 ist gegen three 0.160 gebaut. -->
+  <!-- three.js per CDN (kein Build-Schritt). Version GEPINNT — nicht auf
+       "latest" ändern (XR8.Threejs braucht >= r125, unsere Module sind gegen
+       0.160 geschrieben). -->
   <script type="importmap">
   {
     "imports": {
       "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
-      "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
     }
   }
   </script>
+  <!-- 8th-Wall-Engine (Open-Source-Build, MIT, selbst gehostet unter
+       vendor/8thwall/ — kein CDN, kein Niantic-Server, kein API-Key). Hier nur
+       VORGELADEN (Netzwerk), NICHT ausgeführt: das Skript-Tag setzt js/main.js
+       erst in der Start-Geste („Scan starten"), vorher läuft weder Engine noch
+       Kamera. xr-tracking.js ist der Bildtracker-Chunk (kein SLAM). -->
+  <link rel="preload" href="./vendor/8thwall/xr.js" as="script" />
+  <link rel="modulepreload" href="./vendor/8thwall/xr-tracking.js" />
 </head>
 <body class="lokal"> <!-- „lokal"-Schalter seit Build 22 auch live an (Michael 2026-09-04): Laufweite, Raster-Drift, enges Raster, Laola, Hüpf-Icon -->
   <!-- Pixel-Halo-Filter (UI-Update 2026-09-03): Textkasten mit ausgefransten
@@ -85,7 +92,8 @@
     </filter>
   </svg>
 
-  <!-- AR-Vollbild: MindAR hängt hier Kamera-Video + WebGL-Canvas rein -->
+  <!-- AR-Vollbild: js/main.js legt hier den Canvas an (#xr-canvas), auf den
+       die 8th-Wall-Engine Kamerabild + three.js-Szene zeichnet -->
   <div id="ar-container"></div>
 
   <!-- Suchrahmen: vier weiße Screen-Ecken, bis die Karte gefunden ist -->

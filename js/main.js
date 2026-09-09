@@ -1,24 +1,38 @@
 /* =============================================================================
-   DETAR — App-Boot: Splash → Kamera → MindAR-Tracking → Choreographie.
+   DETAR — App-Boot: Splash → Kamera → 8th-Wall-Bildtracking → Choreographie.
 
    Zwei Modi:
-   • Normal (Handy): MindAR image tracking, Figur steht auf der echten Karte.
+   • Normal (Handy): 8th Wall Image Targets (Open-Source-Engine, selbst gehostet
+                     unter vendor/8thwall/), Figur steht auf der echten Karte.
    • ?desktop:       Desktop-Testmodus ohne Kamera — Karte als Boden-Plane,
                      Maus-Orbit (wie der Lokal-Prototyp). Zum Entwickeln/Prüfen.
    • ?debug:         pinke Hilfslinien (Lauffeld + FACE_CAM-Kegel) zuschalten.
 
-   KOORDINATEN-KERN (MindAR vs. Zapworks): Zapworks lief im Anchor-Origin-
-   Modus (Karte = Welt-Ursprung, Kamera bewegt sich). MindAR ist invertiert
-   (Kamera = Ursprung, der Karten-Anchor bewegt sich im Kamera-Raum). Deshalb
-   leben Figur + Bubble unter einem `worldRoot` (Karten-Frame: X = Karte
-   rechts, Y = hoch von der Karte weg, Z = zur Karten-Unterkante), und alle
-   "Wo ist die Kamera?"-Rechnungen transformieren die Kamera-Weltposition in
-   diesen Frame (frame.getCamLocal) — die komplette Behavior-Logik aus dem
-   Prototyp bleibt dadurch 1:1 gültig.
+   TRACKING (seit 2026-09-09, Branch 8thwall-image-targets): Die Kamera und die
+   Bilderkennung liefert die Open-Source-8th-Wall-Engine (MIT, ohne SLAM). Sie
+   läuft in einer eigenen Kamera-Pipeline (XR8.run) — KEIN SLAM/World-Tracking
+   (disableWorldTracking: true), kein Niantic-Cloud-Aufruf, kein API-Key. Die
+   Engine wird ERST in der Start-Geste geladen (Splash → „Scan starten"), vorher
+   läuft weder Skript noch Kamera. Die Bildpose kommt als Event
+   (reality.imagefound / imageupdated / imagelost) in Szenen-Koordinaten und wird
+   hier in die KAMERA-relative Rohpose umgerechnet, die der PoseStabilizer seit
+   dem MindAR-Stand erwartet — Glättung, Gyro-Fusion, Median-Aufsetzen, ?stats
+   und die gesamte Choreographie bleiben unverändert.
 
-   SKALIERUNG: MindAR normiert die Kartenbreite auf 1 Einheit; im Prototyp
-   war sie SCENE.cardWidth (0.17). worldRoot.scale = 1/cardWidth → alle
-   getunten Werte (Lauffeld, Bubble-Größen, Sprunghöhe …) gelten unverändert.
+   KOORDINATEN-KERN (unverändert): Zapworks lief im Anchor-Origin-Modus (Karte =
+   Welt-Ursprung, Kamera bewegt sich). Der Stabilizer arbeitet invertiert
+   (Kamera = Ursprung, der Karten-Anchor bewegt sich im Kamera-Raum) — deshalb
+   hängt stabRoot unter der Kamera. Figur + Bubble leben unter einem `worldRoot`
+   (Karten-Frame: X = Karte rechts, Y = hoch von der Karte weg, Z = zur Karten-
+   Unterkante), und alle "Wo ist die Kamera?"-Rechnungen transformieren die
+   Kamera-Weltposition in diesen Frame (frame.getCamLocal) — die komplette
+   Behavior-Logik aus dem Prototyp bleibt dadurch 1:1 gültig.
+
+   SKALIERUNG: Die Anchor-Scale wird auf die KARTENBREITE in Szeneneinheiten
+   gesetzt (8th Wall: scale × scaledWidth; der 3:4-Crop des Targets behält die
+   volle Kartenbreite, s. docs/8thwall-migration.md). Damit ist eine Anchor-
+   Einheit = eine Kartenbreite — genau wie bei MindAR — und worldRoot.scale =
+   1/cardWidth lässt alle getunten Werte (Lauffeld, Bubble, Sprünge …) gelten.
    ============================================================================= */
 import * as THREE from "three";
 import { card } from "../cards/elektroniker.js";
@@ -46,11 +60,21 @@ const DESKTOP_MODE = params.has("desktop");
 const DEBUG_MODE = params.has("debug");
 const DEV_MODE = params.has("dev");           // Tuning-Panel (Regler)
 const TIMELINE_MODE = params.has("timeline"); // Theatre.js-Studio (Keyframe-Editor)
-// NEU-ERKENNUNG auf Tap (2026-09-07): wird im AR-Modus gesetzt (startAR) —
-// MindAR neu erkennen lassen + PoseStabilizer per Median neu aufsetzen.
-// Aufrufer: Figur-Tap (Hüpfer kaschiert den Sprung) und Karten-Tap in der
-// „Karte gefunden"-Phase. Im Desktop-Modus null.
+// NEU-AUFSETZEN auf Tap (2026-09-07): wird im AR-Modus gesetzt (startAR) —
+// PoseStabilizer per Median neu aufsetzen. Aufrufer: Figur-Tap (Hüpfer
+// kaschiert den Sprung) und Karten-Tap in der „Karte gefunden"-Phase. Im
+// Desktop-Modus null. (Unter MindAR wurde hier zusätzlich die Neu-Erkennung
+// des Trackers erzwungen; 8th Wall erkennt kontinuierlich neu, ein Eingriff in
+// den Tracker ist weder nötig noch über die API möglich.)
 let relocalize = null;
+
+// 8th-Wall-Engine, selbst gehostet (Open-Source-Build, MIT — s. vendor/8thwall/
+// README.md). xr.js lädt daneben den Chunk „slam", der in der Open-Source-Engine
+// xr-tracking.js ist: der reine Bildtracker, KEIN SLAM-Binary.
+const XR_ENGINE_URL = "./vendor/8thwall/xr.js";
+// Image-Target-Daten (image-target-cli, s. docs/8thwall-migration.md). Eine
+// Seite = eine Karte = ein Target.
+const TARGET_URL = "./targets/8thwall/card.json";
 
 const el = (id) => document.getElementById(id);
 let gyro = null; // GyroFusion — wird in der START-Geste angelegt (iOS-Permission)
@@ -126,8 +150,10 @@ function showStartError(err) {
 
 /* --------------------------------------------------------------------------
    Gemeinsamer Szenen-Aufbau (Rig + Behaviors + UI + Loop) für beide Modi.
+   `render: false` → der Loop rendert NICHT selbst (AR: das übernimmt der
+   Threejs-Pipeline-Modul-Hook onRender der 8th-Wall-Engine, sonst doppelt).
    -------------------------------------------------------------------------- */
-function buildExperience({ renderer, scene, camera, worldRoot, isRunning, preTick }) {
+function buildExperience({ renderer, scene, camera, worldRoot, isRunning, preTick, render = true }) {
   const frame = {
     worldRoot,
     camera,
@@ -274,7 +300,7 @@ function buildExperience({ renderer, scene, camera, worldRoot, isRunning, preTic
       bubble.tick(dt);
       debug?.tick();
     }
-    renderer.render(scene, camera);
+    if (render) renderer.render(scene, camera);
   }
 
   return { controller, bubble, loop, nodes, fx };
@@ -302,108 +328,124 @@ async function attachDevTools(exp) {
 }
 
 /* --------------------------------------------------------------------------
-   AR-Modus (MindAR). Tracking-Glättung: eigener PoseStabilizer (One-Euro +
-   SLERP + Dead-Zone + Lost-Hold) zwischen Anchor und Figur — die Figur hängt
-   NICHT unter anchor.group, sondern unter stabRoot (Szenen-Ebene); der
-   Stabilizer kopiert die Anchor-Pose geglättet rüber und steuert auch die
-   Sichtbarkeit. Zusätzlich NaN-Schutz: kaputte Frames (degenerierte Matrizen
-   um Tracking-Verlust) werden verworfen, Behavior-Ticks pausieren bei Verlust.
+   8th-Wall-Engine LAZY laden — erst aus der Start-Geste heraus. Vor dem Klick
+   auf „Scan starten" läuft kein Engine-Skript und keine Kamera. xr.js zieht
+   über data-preload-chunks="slam" den Tracking-Chunk nach (Open-Source-Engine:
+   xr-tracking.js = Bildtracker ohne SLAM) und feuert danach `xrloaded`.
+   -------------------------------------------------------------------------- */
+function loadEngine() {
+  if (window.XR8) return Promise.resolve(window.XR8);
+  return new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = XR_ENGINE_URL;
+    s.async = true;
+    s.setAttribute("data-preload-chunks", "slam");
+    s.onerror = () => reject(new Error("8th-Wall-Engine nicht ladbar: " + XR_ENGINE_URL +
+      " (Build nach vendor/8thwall/ legen, s. vendor/8thwall/README.md)"));
+    window.addEventListener("xrloaded", () => resolve(window.XR8), { once: true });
+    document.head.appendChild(s);
+  });
+}
+
+/* Target-Daten (JSON aus image-target-cli) laden. Das Luminanz-Bild wird
+   NEBEN der JSON gesucht (resources.luminanceImage) — so kann ein frisch
+   generierter CLI-Ordner 1:1 nach targets/8thwall/ kopiert werden, ohne den
+   von der CLI fest eingetragenen Pfad „image-targets/…" anzupassen. */
+async function loadTargetData() {
+  const res = await fetch(TARGET_URL, { cache: "no-store" });
+  if (!res.ok) throw new Error("Target-Datei fehlt: " + TARGET_URL);
+  const data = await res.json();
+  const base = new URL(TARGET_URL, location.href);
+  const lum = data.resources?.luminanceImage;
+  data.imagePath = lum ? new URL(lum, base).href : new URL(data.imagePath, location.href).href;
+  // Karte liegt in der Hand → beweglich (kein „static target"). Physische
+  // Breite = Kartenbreite (tuning.json → SCENE.cardWidth, 0.059 m): damit ist
+  // detail.scale metrisch und die mm-Angaben in ?stats stimmen; die Figur
+  // hängt davon nicht ab (Anchor-Einheit = Kartenbreite, s. Kopfkommentar).
+  data.moveable = true;
+  data.physicalWidthInMeters = SCENE.cardWidth;
+  return data;
+}
+
+/* --------------------------------------------------------------------------
+   AR-Modus (8th Wall Image Targets). Tracking-Glättung: eigener PoseStabilizer
+   (One-Euro + SLERP + Dead-Zone + Lost-Hold + Median-Aufsetzen) zwischen
+   Rohpose und Figur — die Figur hängt unter stabRoot (Kind der KAMERA, weil
+   der Stabilizer kamera-relativ arbeitet); `anchor` ist eine Gruppe außerhalb
+   der Szene, deren Matrix pro Frame aus der 8th-Wall-Bildpose gebaut wird
+   (Kamera⁻¹ × Bild, Scale = Kartenbreite). Der Stabilizer kopiert die Pose
+   geglättet nach stabRoot und steuert auch die Sichtbarkeit. NaN-Schutz und
+   Behavior-Pause bei Verlust bleiben wie gehabt.
+
+   Aufgelöst wird das Promise, sobald die Kamera läuft und die Szene steht
+   (onStart); verworfen bei Kamera-Fehler (onCameraStatusChange „failed" →
+   NotAllowedError für den Kamera-abgelehnt-Bildschirm) oder Engine-Ausnahme.
    -------------------------------------------------------------------------- */
 async function startAR() {
-  const { MindARThree } = await import("mindar-image-three");
   const container = el("ar-container");
+  const [XR8, targetData] = await Promise.all([loadEngine(), loadTargetData()]);
 
-  // KAMERA-AUFLÖSUNG (2026-07-14, Finding 1): MindAR fordert die Kamera ohne
-  // width/height an → meist 640×480, und der Tracker arbeitet DIREKT auf
-  // dieser Auflösung (grobe Features = Pose-Rauschen). MindARThree bietet
-  // keinen Parameter dafür → getUserMedia EINMALIG wrappen und die Wunsch-
-  // Auflösung als `ideal` einschleusen (`ideal` kann nie zum Constraint-
-  // Fehler führen — das Gerät liefert das nächstbeste Format). Nach start()
-  // wird das Original wiederhergestellt. A/B am Gerät: ?res=960x540 …
-  // übersteuert CAM, ?res=0 schaltet den Patch ab. Gelieferte Auflösung
-  // und Vision-Hz in ?stats prüfen.
-  const resParam = params.get("res");
-  let camW = CAM.width, camH = CAM.height;
-  let patchCam = camW > 0 && resParam !== "0";
-  const resMatch = resParam ? resParam.match(/^(\d+)[x×](\d+)$/i) : null;
-  if (resMatch) { camW = +resMatch[1]; camH = +resMatch[2]; patchCam = true; }
-  const gumOriginal = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
-  if (patchCam) {
-    navigator.mediaDevices.getUserMedia = (constraints) => {
-      if (constraints && constraints.video && typeof constraints.video === "object") {
-        constraints.video.width = { ideal: camW };
-        constraints.video.height = { ideal: camH };
-      }
-      return gumOriginal(constraints);
-    };
-  }
+  // XR8.Threejs verlangt das globale THREE (>= r125) — dieselbe Instanz wie
+  // unsere Module (Importmap three@0.160), sonst passen Klassen nicht zusammen.
+  window.THREE = THREE;
 
-  const mindarThree = new MindARThree({
-    container,
-    imageTargetSrc: "./targets/card.mind",
-    uiLoading: "no", uiScanning: "no", uiError: "no",
-    filterMinCF: STAB.filterMinCF,
-    filterBeta: STAB.filterBeta,
-    missTolerance: STAB.missTolerance,
-    warmupTolerance: STAB.warmupTolerance,
-  });
-  const { renderer, scene, camera } = mindarThree;
-
-  // PIXEL-RATIO-CAP (2026-07-14, Finding 2): MindARThree setzt im Konstruktor
-  // devicePixelRatio (= 3 auf iPhones); resize() fasst die Ratio nicht an —
-  // einmal überschreiben genügt. Cap 2 gibt dem tfjs-Tracker GPU-Luft
-  // (Vision-Loop und Renderer teilen sich die GPU) → höhere Vision-Hz.
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, CAM.maxPixelRatio));
-
-  // GOTCHA (gefunden 2026-07-09): mindar-image-three legt IMMER einen
-  // CSS3DRenderer-Layer an — ein unbenanntes, vollflächiges <div> NACH dem
-  // Canvas. Es schluckt alle Pointer-Events → „Karte lässt sich nicht tappen".
-  // Wir nutzen kein CSS3D → Layer für Eingaben durchlässig machen.
-  if (mindarThree.cssRenderer?.domElement) {
-    mindarThree.cssRenderer.domElement.style.pointerEvents = "none";
-  }
-
-  const anchor = mindarThree.addAnchor(0);
-
-  // Geglätteter Träger auf Szenen-Ebene (anchor.group bleibt leer)
-  const stabRoot = new THREE.Group();
-  scene.add(stabRoot);
-  const stab = new PoseStabilizer(anchor.group, stabRoot, gyro);
-  // NEU-ERKENNUNG (2026-09-07, ohne Fork): MindARs Controller hält den Tracking-
-  // Zustand öffentlich in `trackingStates`. isTracking=false → die Verarbeitungs-
-  // schleife läuft im nächsten Frame durch Detect+Match (absolute Pose aus dem
-  // Feature-Matching) statt durch das relative Tracking, das Drift mitschleppt.
-  // Gelingt die Erkennung binnen missTolerance Frames, meldet MindAR kein
-  // „verloren"; die Rohpose wird einfach ersetzt. Der Stabilizer setzt danach
-  // per Median neu auf (reacquire), die alte Rohpose zählt dabei nicht mit.
-  relocalize = () => {
-    const ts = mindarThree.controller?.trackingStates?.[0];
-    if (ts) ts.isTracking = false;
-    stab.reacquire();
+  // Canvas für Kamerabild + Szene. Die Engine liest canvas.width/height jeden
+  // Frame und passt Renderer/Projektion an (onCanvasSizeChange) — Größe setzen
+  // wir selbst: CSS-Größe × PixelRatio, gecappt (CAM.maxPixelRatio, Finding 2:
+  // Cap 2 statt 3 auf iPhones gibt der Vision-Schleife GPU-Luft).
+  const canvas = document.createElement("canvas");
+  canvas.id = "xr-canvas";
+  container.appendChild(canvas);
+  const sizeCanvas = () => {
+    const pr = Math.min(window.devicePixelRatio || 1, CAM.maxPixelRatio);
+    canvas.width = Math.max(1, Math.round(container.clientWidth * pr));
+    canvas.height = Math.max(1, Math.round(container.clientHeight * pr));
   };
+  sizeCanvas();
+  window.addEventListener("resize", () => requestAnimationFrame(sizeCanvas));
+  window.addEventListener("orientationchange", () => setTimeout(sizeCanvas, 300));
 
-  // Karten-Frame unter dem stabRoot: X = rechts, Y = hoch von der Karte,
-  // Z = zur Karten-Unterkante. (+90° X: Anchor-Z "aus dem Bild" wird zu Y.)
-  const worldRoot = new THREE.Group();
-  worldRoot.rotation.x = Math.PI / 2;
-  worldRoot.scale.setScalar(1 / SCENE.cardWidth);
-  stabRoot.add(worldRoot);
-
-  // ?stats — Live-Diagnose am Gerät (Tracking/Gyro/Jitter in Zahlen)
-  const stats = params.has("stats")
-    ? new StatsOverlay(anchor.group, stabRoot, stab, gyro,
-        { getVideo: () => mindarThree.video, renderer, card }) // Kamera-Auflösung + PixelRatio anzeigen
-    : null;
-
-  const exp = buildExperience({
-    renderer, scene, camera, worldRoot,
-    /* Behavior-Ticks nur, solange die Figur sichtbar ist — verhindert, dass
-       Lost-Frames (NaN-Quelle) in die Zustands-Lerps einsickern. */
-    isRunning: () => stabRoot.visible,
-    preTick: () => { stab.tick(); stats?.tick(); },
+  // NUR Bildtracking: disableWorldTracking MUSS vor pipelineModule() und run()
+  // stehen. Ohne World-Tracking fragt die Engine weder Bewegungssensoren an
+  // noch lädt sie je einen SLAM-Chunk; unsere GyroFusion bleibt davon getrennt.
+  XR8.XrController.configure({
+    disableWorldTracking: true,
+    imageTargetData: [targetData],
   });
-  const { controller, loop } = exp;
-  await attachDevTools(exp);
+
+  return new Promise((resolve, reject) => {
+    XR8.addCameraPipelineModules([
+      XR8.XrController.pipelineModule(),      // „reality": Bildtracker, feuert reality.image*-Events
+      XR8.GlTextureRenderer.pipelineModule(), // Kamerabild auf den Canvas (vor der Szene)
+      XR8.Threejs.pipelineModule(),           // three.js-Szene/-Kamera/-Renderer auf demselben Canvas
+      detarPipelineModule(XR8, { resolve, reject }),
+    ]);
+    XR8.run({
+      canvas,
+      cameraConfig: { direction: XR8.XrConfig.camera().BACK },
+      // ANY statt MOBILE: ohne World-Tracking läuft Bildtracking auch am
+      // Rechner mit Webcam (Schnelltest) — die Engine lässt das nur so zu.
+      allowedDevices: XR8.XrConfig.device().ANY,
+    });
+  });
+}
+
+/* Unser Kamera-Pipeline-Modul: baut in onStart die Szene auf (nach dem
+   Threejs-Modul, damit XR8.Threejs.xrScene() steht), tickt in onUpdate und
+   übersetzt die Bild-Events in die bisherigen Hooks (Stabilizer, Controller,
+   Suchrahmen, Karte-verloren-Hinweis). Ereignis-Zuordnung zu MindAR:
+     anchor.onTargetFound → reality.imagefound
+     (Pose-Update)        → reality.imageupdated  (nur wenn sich die Pose ändert;
+                                                    sonst „stale" wie bei MindAR)
+     anchor.onTargetLost  → reality.imagelost
+     (Target geladen)     → reality.imagescanning */
+function detarPipelineModule(XR8, { resolve, reject }) {
+  let exp = null, stab = null, stats = null;
+  let anchor = null, stabRoot = null;
+  let latest = null;                                  // letzte Bildpose (detail) — null = nicht getrackt
+  const video = { videoWidth: 0, videoHeight: 0 };    // für ?stats (Kamera-Auflösung)
+  const _img = new THREE.Matrix4(), _camInv = new THREE.Matrix4();
+  const _p = new THREE.Vector3(), _q = new THREE.Quaternion(), _s = new THREE.Vector3();
 
   // Karte verloren: Support-Zeile mit Icon mittig im Bild (mock 05), das Menü
   // bleibt stehen und friert nach CHOREO.trackingLostMs ein.
@@ -411,28 +453,121 @@ async function startAR() {
   const lost = buildSupport("gefunden", [{ text: "Halte auf die Karte" }]);
   lost.icon.stop();
   hint.appendChild(lost);
-  anchor.onTargetFound = () => {
+
+  /* Bildpose (Szenen-Frame; Bild = XY-Ebene, +Z zur Kamera, Höhe des 3:4-Crops
+     = 1 × scale) → kamera-relative Rohpose mit Scale = KARTENBREITE. Der Crop
+     behält die volle Kartenbreite, also Kartenbreite = scale × scaledWidth.
+     Wird jeden Frame gerechnet (Kamera-Matrix des aktuellen Frames, vom
+     Threejs-Modul gesetzt); ohne neue Messung bleibt die Matrix bitidentisch →
+     der Stabilizer sieht den Frame korrekt als „stale". */
+  function updateAnchor(camera) {
+    const d = latest;
+    if (!d) return;
+    const aspect = d.scaledWidth ?? (d.properties ? d.properties.width / d.properties.height : 1);
+    const cardWidth = (d.scale || 1) * aspect;
+    _p.set(d.position.x, d.position.y, d.position.z);
+    _q.set(d.rotation.x, d.rotation.y, d.rotation.z, d.rotation.w);
+    _s.setScalar(cardWidth);
+    _img.compose(_p, _q, _s);
+    camera.updateMatrixWorld(true);
+    _camInv.copy(camera.matrixWorld).invert();
+    anchor.matrix.multiplyMatrices(_camInv, _img);
+  }
+
+  function onFound(detail) {
+    latest = detail;
     document.body.classList.remove("scanning");
     if (hint.classList.contains("show")) { hint.classList.remove("show"); lost.icon.stop(); }
+    if (exp) updateAnchor(exp.camera); // Pose steht, BEVOR der Stabilizer aufsetzt
     stab.onFound();
+    const { controller } = exp;
     controller.onCardSeen(); // greeted-Flag: Choreographie nur beim ersten Mal
     controller.onTrackingFound(); // Menü wieder freigeben
-  };
-  anchor.onTargetLost = () => {
+  }
+
+  function onLost() {
+    latest = null;
     stab.onLost();
+    const { controller } = exp;
     if (controller.greeted) {
       if (controller.lostHintWanted) { hint.classList.add("show"); lost.icon.setMode("suchen"); }
       controller.onTrackingLost(); // nach CHOREO.trackingLostMs friert das Menü ein; im Ruhezustand wechselt die Panel-Zeile
     }
-  };
-
-  try {
-    await mindarThree.start(); // fragt die Kamera-Berechtigung an (User-Geste!)
-  } finally {
-    if (patchCam) navigator.mediaDevices.getUserMedia = gumOriginal; // Patch zurückbauen
   }
-  console.log(`DETAR Kamera: ${mindarThree.video?.videoWidth}×${mindarThree.video?.videoHeight}, PixelRatio ${renderer.getPixelRatio()}`);
-  renderer.setAnimationLoop(loop);
+
+  let settled = false;
+  const fail = (err) => { if (!settled) { settled = true; reject(err); } };
+
+  return {
+    name: "detar",
+
+    onCameraStatusChange: ({ status, reason }) => {
+      if (status !== "failed") return;
+      // DENY_CAMERA → NotAllowedError, damit showStartError den eigenen
+      // Kamera-abgelehnt-Bildschirm zeigt (Regex permission|notallowed|denied).
+      const err = new Error("Kamera nicht verfügbar (" + (reason ?? "UNSPECIFIED") + ")");
+      err.name = reason === "DENY_CAMERA" ? "NotAllowedError" : "CameraError";
+      fail(err);
+    },
+
+    onException: (err) => {
+      console.error("XR8:", err);
+      fail(err instanceof Error ? err : new Error(String(err)));
+    },
+
+    onStart: ({ videoWidth, videoHeight }) => {
+      video.videoWidth = videoWidth; video.videoHeight = videoHeight;
+      const { scene, camera, renderer } = XR8.Threejs.xrScene();
+
+      // Rohpose-Träger (Ersatz für MindARs anchor.group): NICHT in der Szene,
+      // matrixAutoUpdate aus — nur die Matrix zählt (der Stabilizer liest sie).
+      anchor = new THREE.Group();
+      anchor.matrixAutoUpdate = false;
+
+      // Geglätteter Träger als KIND DER KAMERA (kamera-relative Pose)
+      stabRoot = new THREE.Group();
+      camera.add(stabRoot);
+      stab = new PoseStabilizer(anchor, stabRoot, gyro);
+      relocalize = () => stab.reacquire();
+
+      // Karten-Frame unter dem stabRoot: X = rechts, Y = hoch von der Karte,
+      // Z = zur Karten-Unterkante. (+90° X: Anchor-Z "aus dem Bild" wird zu Y.)
+      const worldRoot = new THREE.Group();
+      worldRoot.rotation.x = Math.PI / 2;
+      worldRoot.scale.setScalar(1 / SCENE.cardWidth);
+      stabRoot.add(worldRoot);
+
+      // ?stats — Live-Diagnose am Gerät (Tracking/Gyro/Jitter in Zahlen)
+      stats = params.has("stats")
+        ? new StatsOverlay(anchor, stabRoot, stab, gyro, { getVideo: () => video, renderer, card })
+        : null;
+
+      exp = buildExperience({
+        renderer, scene, camera, worldRoot,
+        /* Behavior-Ticks nur, solange die Figur sichtbar ist — verhindert, dass
+           Lost-Frames (NaN-Quelle) in die Zustands-Lerps einsickern. */
+        isRunning: () => stabRoot.visible,
+        preTick: () => { updateAnchor(camera); stab.tick(); stats?.tick(); },
+        render: false, // rendert XR8.Threejs in onRender
+      });
+      exp.camera = camera;
+      console.log(`DETAR Kamera: ${videoWidth}×${videoHeight}, Canvas ${renderer.domElement.width}×${renderer.domElement.height}`);
+      // Erst auflösen (Splash weg, body.scanning an), DANN die Dev-Werkzeuge
+      // nachladen — der Tracker läuft ab hier schon; würde ein Fund vor dem
+      // Auflösen kommen, setzte boot() den Suchrahmen danach wieder an.
+      if (!settled) { settled = true; resolve(); }
+      attachDevTools(exp);
+    },
+
+    onUpdate: () => { exp?.loop(); },
+
+    listeners: [
+      { event: "reality.imagescanning", process: () => console.log("DETAR Target geladen, suche Karte …") },
+      { event: "reality.imagefound",   process: ({ detail }) => { if (exp) onFound(detail); } },
+      { event: "reality.imageupdated", process: ({ detail }) => { latest = detail; } },
+      { event: "reality.imagelost",    process: () => { if (exp) onLost(); } },
+    ],
+  };
 }
 
 /* --------------------------------------------------------------------------

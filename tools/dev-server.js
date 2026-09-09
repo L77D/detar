@@ -30,6 +30,7 @@ const MIME = {
   ".woff": "font/woff",
   ".woff2": "font/woff2",
   ".mind": "application/octet-stream",
+  ".wasm": "application/wasm",
 };
 
 http.createServer((req, res) => {

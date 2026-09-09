@@ -137,7 +137,9 @@ export const STAB = {
                      //   die Normierung)
   // 7 = GYRO.enabled · 8 = extrapolate (unten)
 
-  // (a) MindAR-eingebauter Filter (Rohsignal, Defaults belassen)
+  // (a) MindAR-eingebauter Filter — OHNE WIRKUNG seit 8th Wall (2026-09-09,
+  //     Branch 8thwall-image-targets): die Engine hat keinen konfigurierbaren
+  //     Vorfilter. Keys bleiben für tuning.json-/Preset-Kompatibilität stehen.
   filterMinCF: 0.01,    // 2026-07-14: 0.001 → 0.01. Bei Karten-Bewegung hing die
                         // intern gefilterte Pose zu weit hinter der Messung → MindARs
                         // eigener Tracker suchte am falschen Ort und verwarf den Track
@@ -352,23 +354,18 @@ export const GYRO = {
   deltaMax: 0.2,         // rad; größere Deltas = Sensor-Glitch → verwerfen (resync)
 };
 
-// Kamera-Anforderung (2026-07-14, Finding 1): MindAR fragt die Kamera OHNE
-// Auflösung an (video:{facingMode}) — Phones liefern dann meist 640×480, und
-// der Tracker arbeitet direkt auf dieser Auflösung (inputWidth = videoWidth).
-// Grobe Features = Pose-Rauschen; das ist der größte Roh-Signal-Hebel.
-// MindARThree hat KEINEN Auflösungs-Parameter → main.js wrappt getUserMedia
-// einmalig und schleust width/height als `ideal` ein (ideal kann nie zum
-// Constraint-Fehler führen; das Gerät liefert das nächstbeste Format).
-// A/B am Gerät: ?res=WxH übersteuert, ?res=0 schaltet den Patch ab.
-// Tatsächlich gelieferte Auflösung + Vision-Hz in ?stats prüfen — bricht die
-// Hz ein, 960x540 testen.
+// Kamera (2026-09-09, 8th Wall): Die Engine wählt die Kamera-Auflösung SELBST
+// über eine geräteabhängige Constraint-Leiter mit Retry (constraints-helper der
+// Engine) — der frühere getUserMedia-Wrap aus main.js (MindAR-Finding 1,
+// 960×540 als `ideal`) ist entfallen; `width`/`height` und `?res=` sind ohne
+// Wirkung und bleiben nur für tuning.json-Kompatibilität stehen. Gelieferte
+// Auflösung weiter in ?stats ablesen.
 export const CAM = {
-  width: 960,            // 2026-07-14: 1280→960 — am Gerät verifiziert: 720p drückte
-  height: 540,           // die Vision-Hz so weit, dass Tracking bei Karten-Bewegung
-                         // abriss; 960×540 hält Bewegung UND ist schärfer als 640×480.
-  maxPixelRatio: 2,      // Renderer-Cap (Finding 2): MindAR setzt devicePixelRatio
-                         // (= 3 auf iPhones) — Cap auf 2 gibt dem tfjs-Tracker
-                         // GPU-Luft → höhere Vision-Hz, optisch kaum sichtbar.
+  width: 960,            // ohne Wirkung unter 8th Wall (s. o.)
+  height: 540,           // ohne Wirkung unter 8th Wall (s. o.)
+  maxPixelRatio: 2,      // Canvas-Cap (Finding 2, gilt weiter): main.js setzt die
+                         // Canvas-Pixelgröße = CSS-Größe × min(devicePixelRatio, Cap)
+                         // — Cap 2 statt 3 auf iPhones gibt der Vision-Schleife GPU-Luft.
 };
 
 const ALL = { TYPO, FACE, IDLE, ACT, CHOREO, SCENE, STAB, GYRO, ACTFX, PORTAL, CAM, SOUND };

@@ -101,7 +101,7 @@ html, body {
   mask-position: 0 0, calc(var(--d-dot-gap) / 2) calc(var(--d-dot-gap) / 2);
 }
 
-/* --- AR-Container: Vollbild, MindAR hängt hier Video + Canvas rein -------- */
+/* --- AR-Container: Vollbild, trägt den XR8-Canvas (#xr-canvas) --------------- */
 #ar-container {
   position: fixed;
   inset: 0;
@@ -113,7 +113,12 @@ html, body {
    Wisch-Geste interpretieren (sonst pointercancel statt pointerup —
    Symptom: „Karte lässt sich nicht tappen"). */
 #ar-container canvas { position: absolute; inset: 0; touch-action: none; }
-/* Video + evtl. weitere MindAR-Layer dürfen keine Taps schlucken —
+/* XR8-Canvas (2026-09-09): die Engine ruft renderer.setSize(canvas.width, …)
+   und schreibt dabei die PIXEL-Größe als Inline-CSS — bei PixelRatio > 1 wäre
+   der Canvas doppelt so groß wie der Bildschirm. Deshalb CSS-Größe hart auf
+   den Container; die Pixel-Größe setzt js/main.js (sizeCanvas). */
+#xr-canvas { width: 100% !important; height: 100% !important; }
+/* Video + evtl. weitere Engine-Layer dürfen keine Taps schlucken —
    Eingaben gehören dem Canvas (Raycast). Doppelter Boden zum JS-Fix. */
 #ar-container video, #ar-container div { pointer-events: none; }
 

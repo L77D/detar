@@ -98,7 +98,9 @@ if offline:
 else:
     imports["three"] = CDN_THREE
     imports["three/addons/"] = CDN_ADDONS
-imports["mindar-image-three"] = js_data_uri("export const MindARThree = null; // Lokal-Prototyp: kein AR")
+# (8th Wall, 2026-09-09: die Engine wird von main.js erst im AR-Modus per Skript-Tag
+# geladen — im Lokal-Prototyp (immer Desktop) passiert das nie. Nur die Preload-Links
+# aus index.html entfernen, sonst meldet der Browser fehlende vendor/-Dateien.)
 
 # --- HTML zusammensetzen ---------------------------------------------------------
 html = read(os.path.join(ROOT, "index.html"))
@@ -107,6 +109,7 @@ html = re.sub(r'\s*<link rel="stylesheet" href="./css/app.css" />', "", html)
 html = html.replace('  <link rel="stylesheet" href="./css/question-menu.css" />', "  <style>\n" + css + "\n  </style>")
 html = re.sub(r'<script type="importmap">.*?</script>', lambda m: '<script type="importmap">' + json.dumps({"imports": imports}) + '</script>', html, flags=re.S)
 html = inline_literals(html)
+html = re.sub(r'\s*<link rel="(?:module)?preload" href="./vendor/8thwall/[^"]+"[^>]*>', "", html)
 tuning = json.loads(read(os.path.join(ROOT, "tuning.json")))
 # Nur-Lokal-Verhalten (2026-09-04): hüpfendes Icon auf der Karte; die CSS-
 # Änderungen (Silkscreen-Laufweite, Raster-Drift, Laola, enges Raster) hängen

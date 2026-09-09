@@ -3,11 +3,19 @@
 Mobile WebAR-Demo: Karte scannen, Comic-Figur steht auf der Karte und führt
 einen Dialog nach RPG-NPC-Vorbild (Fragen nach Themen, Freischaltungen,
 Rückfragen der Figur) mit Sprechblase, Posen und Gesichtsanimation. Kompletter Port
-des Zapworks/Mattercraft-Prototyps auf **Open-Source-Tracking (MindAR)** —
-keine Lizenzkosten, kein Build-Schritt, eine einzige statische Website.
+des Zapworks/Mattercraft-Prototyps auf **Open-Source-Tracking** — keine
+Lizenzkosten, kein Build-Schritt, eine einzige statische Website.
+
+**Tracking (Branch `8thwall-image-targets`, 2026-09-09):** 8th Wall Image
+Targets aus der **Open-Source-8th-Wall-Engine** (MIT), selbst gehostet unter
+`vendor/8thwall/` — nur Bildtracking, kein SLAM, kein Niantic-Server, kein
+API-Key. Die Engine startet erst nach „Scan starten". Umstieg, Target-
+Erzeugung und Event-Zuordnung: `docs/8thwall-migration.md`. (`main` läuft
+noch auf MindAR.)
 
 **Kein LLM, keine externe API** — alle Inhalte sind autorisiert und hartkodiert
-(`cards/*.js`). Einzige Laufzeit-Abhängigkeiten: three.js + MindAR per CDN.
+(`cards/*.js`). Laufzeit-Abhängigkeiten: three.js per CDN + die 8th-Wall-Engine
+aus dem Repo.
 
 UI (Build 18, 2026-09-03) nach Figma „DETAR": Blau/Gelb/Schwarz, Pixel-Halo-
 Kästen, Handy-Icon, Eck-Marker. Fonts: Jersey 10 + Silkscreen, beide SIL Open
@@ -91,30 +99,36 @@ Datei löschen = zurück zu den Defaults.
    ordner; Emotion-Tags aus dem geschlossenen Vokabular, Highlight-Tags
    `<marker> <gross> <leise> <knall>`).
 2. Import oben in `js/main.js` auf die neue Datei umstellen.
-3. Neues Kartenbild als Tracking-Target kompilieren (s. u.) und
-   `targets/card.mind` ersetzen.
+3. Neues Kartenbild als 8th-Wall-Target erzeugen (s. u.) und die Dateien in
+   `targets/8thwall/` ersetzen.
 4. Character-PNGs in `assets/character/` austauschen (gleiches
    1024×1536-Canvas, gleiche Slicing-Positionen — wie im Nano-Banana-Workflow).
 
-## Tracking-Target (.mind) neu kompilieren
+## Tracking-Target (8th Wall) neu erzeugen
 
-Das Target ist aus dem Kartenbild kompiliert (Vorschau: `assets/card/detar_demokarte_070926.jpg`, 1200 px; Druckdatei 2910×4488 in `Assets/September/demo_skat_070926.jpg`). Bei
-neuem Karten-Layout:
+Das Target ist aus dem beschnittenen Kartenbild erzeugt
+(`Assets/September/demo_skat_070926_mind_cropped.png`, 1346×2156; Druckdatei
+`demo_skat_070926.jpg`). Bei neuem Karten-Layout:
 
-1. https://hiukim.github.io/mind-ar-js-doc/tools/compile/ öffnen
-2. Kartenbild hochladen → „Start" → kompilierte `.mind`-Datei herunterladen
-3. Als `targets/card.mind` ins Repo legen (Name beibehalten)
+1. `npx @8thwall/image-target-cli@latest` — Bildpfad, Typ `flat`, Default-Crop,
+   Ordner `targets/8thwall`, Name `card` (Details und Pipe-Variante:
+   `docs/8thwall-migration.md`, Abschnitt 1)
+2. `card.json`, `card_luminance.png`, `card_thumbnail.png` einchecken
+   (`_cropped`/`_original` nicht)
+3. `SCENE.cardAspect` in `js/config.js` auf Höhe/Breite der ganzen Karte setzen
 
-Gute Targets: viel Kontrast, viele unregelmäßige Details, matt gedruckt —
-dieselben Regeln wie beim Zapworks-Training.
+Der Crop ist immer 3:4 (zentriert, volle Kartenbreite). Gute Targets: viel
+Kontrast, viele unregelmäßige Details, matt gedruckt — dieselben Regeln wie
+beim Zapworks-Training.
 
 ## Tracking-Glättung
 
-MindAR hat einen **eingebauten One-Euro-Filter** (ersetzt den
-Zapworks-PoseStabilizer). Schrauben in `js/config.js` → `STAB`:
-erst `filterMinCF` senken, bis das Ruhe-Zittern weg ist, dann `filterBeta`
-erhöhen, bis schnelle Bewegungen ohne Nachziehen folgen — eine Schraube pro
-Test. `missTolerance` hält die Pose bei kurzem Tracking-Verlust.
+Die Haupt-Glättung ist unser **PoseStabilizer** (`js/poseStabilizer.js`,
+`STAB` in `js/config.js`): erst `minCutoff` senken, bis das Ruhe-Zittern weg
+ist, dann `beta` erhöhen, bis schnelle Bewegungen ohne Nachziehen folgen —
+eine Schraube pro Test, Zahlen in `?stats`. `lostHoldMs`/`GYRO.bridgeMs`
+halten die Pose bei kurzem Tracking-Verlust. (`filterMinCF`/`filterBeta`/
+`missTolerance`/`warmupTolerance` waren MindAR-intern und sind ohne Wirkung.)
 
 ## Struktur
 
@@ -122,7 +136,7 @@ Test. `missTolerance` hält die Pose bei kurzem Tracking-Verlust.
 index.html            Splash (DU SCANNST … START) + AR-Container + Overlays
 css/app.css           Splash, DET-Logo-Overlay, Tracking-Hinweis, Font
 css/question-menu.css Bottom-UI (Onboarding + Fragen-Karussell), CSS-Dashboard
-js/main.js            Boot, MindAR-Setup, Desktop-Modus, Figur-Tap, Loop
+js/main.js            Boot, 8th-Wall-Setup (Pipeline-Modul), Desktop-Modus, Figur-Tap, Loop
 js/config.js          ALLE Tuning-Dashboards + tuning.json-Merge
 js/rig.js             Figuren-Hierarchie (Transforms aus Scene.zcomp)
 js/cardController.js  Choreographie + Dialogablauf: Scan → Pop-In → Begrüßung →
@@ -140,26 +154,34 @@ js/portalView.js      Einblick (Portal/Galerie) — in v1 nicht aktiv
 js/debugOverlay.js    pinke Hilfslinien (?debug)
 cards/                ein .js pro Beruf (Inhalte, hartkodiert)
 assets/               Character-PNGs, Logos, Font, Kartenbild
-targets/card.mind     kompiliertes MindAR-Tracking-Target
+targets/8thwall/      Image-Target (card.json + card_luminance.png) aus image-target-cli
+targets/*.mind        alte MindAR-Targets (nur Historie, wird nicht mehr geladen)
+vendor/8thwall/       Open-Source-8th-Wall-Engine (xr.js + xr-tracking.js, MIT)
+docs/8thwall-migration.md  Umstieg MindAR → 8th Wall: Target-Erzeugung, Änderungen, Events
 tuning.json           (optional) Preset-Export aus dem Lokal-Prototyp
 ```
 
 ## Technik-Notizen (für spätere Änderungen wichtig)
 
 * **Koordinaten:** Zapworks lief im Anchor-Origin-Modus (Karte = Ursprung,
-  Kamera bewegt sich), MindAR ist invertiert (Kamera = Ursprung, Anchor bewegt
-  sich). Figur + Bubble hängen deshalb unter `worldRoot` (Karten-Frame, Y =
+  Kamera bewegt sich), der PoseStabilizer arbeitet invertiert (Kamera =
+  Ursprung, Anchor bewegt sich). 8th Wall liefert die Bildpose im Szenen-Frame;
+  `main.js` rechnet sie in Kamera⁻¹ × Bild um, `stabRoot` hängt unter der
+  Kamera. Figur + Bubble hängen unter `worldRoot` (Karten-Frame, Y =
   hoch von der Karte); alle „Wo ist die Kamera?"-Rechnungen laufen über
   `frame.getCamLocal()`. Die Behavior-Logik selbst ist 1:1 der Stand des
   Lokal-Prototyps (2026-07-06) inkl. umgebautem Walk, attending-Modus,
   Figur-Tap-Sprung, unten verankerter Bubble und HeadNod-Nick-Achse.
-* **Skalierung:** MindAR normiert die Kartenbreite auf 1 Einheit; `worldRoot`
-  wird um `1/SCENE.cardWidth` skaliert, damit alle Prototyp-Werte
-  (Lauffeld, Sprunghöhe, Bubble-Maße) unverändert gelten.
+* **Skalierung:** Die Anchor-Scale ist die Kartenbreite (8th Wall:
+  `scale × scaledWidth`, der 3:4-Crop behält die volle Breite) → eine Anchor-
+  Einheit = eine Kartenbreite wie bei MindAR; `worldRoot` wird um
+  `1/SCENE.cardWidth` skaliert, damit alle Prototyp-Werte (Lauffeld,
+  Sprunghöhe, Bubble-Maße) unverändert gelten.
 * **Painter's Algorithm:** depthTest AUS auf allen flachen Layern, feste
   renderOrder (Body 0, Head 1, Face 2, Bubble 3) — nie ändern, sonst
   verschwindet der Kopf hinter dem Body (siehe CLAUDE.md-Gotchas).
-* **CDN-Versionen sind gepinnt** (three 0.160.0, mind-ar 1.2.5) — nicht
-  blind hochziehen, mind-ar ist gegen diese three-Version gebaut.
+* **three.js ist gepinnt** (0.160.0 per CDN-Importmap) — nicht blind
+  hochziehen; `XR8.Threejs` braucht das globale THREE ≥ r125 und dieselbe
+  Instanz wie unsere Module (`window.THREE = THREE` in main.js).
 
 © Studio2B — Demo. Logos: DEIN ERSTER TAG / PENNY (mit Erlaubnis).

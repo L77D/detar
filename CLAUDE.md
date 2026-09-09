@@ -1,6 +1,6 @@
 # CLAUDE.md — DETAR WebAR
 
-Stand: 2026-09-07 · Build 33 (Link-Frage; ?stats zeigt geladene Karte) · Live: https://l77d.github.io/detar
+Stand: 2026-09-09 · Build 47 (Branch `8thwall-image-targets`: Tracking auf 8th Wall) · Live (main, Build 33, MindAR): https://l77d.github.io/detar
 
 ## Projekt
 
@@ -116,13 +116,23 @@ Physische Karte: **59 × 91 mm hochkant** (Michael 2026-09-07) →
 in `?stats` (Jitter-Richtwerte unten gelten weiter in mm); die Figur ist
 relativ zur Kartenbreite definiert und wird dadurch nicht kleiner.
 
-**Stack (GEPINNT, nicht bumpen):** `mind-ar@1.2.5` + `three@0.160` per
-CDN-Importmap (`index.html`) — mind-ar 1.2.5 ist gegen three 0.160 gebaut.
-Vanilla ES-Module, GitHub Pages (served NUR `main`).
+**Stack (Branch `8thwall-image-targets`, 2026-09-09):** `three@0.160` per
+CDN-Importmap (gepinnt) + **Open-Source-8th-Wall-Engine** (MIT) selbst gehostet
+unter `vendor/8thwall/` (`xr.js` + `xr-tracking.js`; Bildtracker, KEIN SLAM,
+kein Binary, kein Niantic-Aufruf, kein API-Key). Engine wird erst in der Start-
+Geste geladen. Target: `targets/8thwall/card.json` + `card_luminance.png` aus
+`@8thwall/image-target-cli`. Alles dazu: `docs/8thwall-migration.md`.
+`main` läuft weiter auf `mind-ar@1.2.5` (dort: mind-ar ist gegen three 0.160
+gebaut, nicht bumpen). Vanilla ES-Module, GitHub Pages (served NUR `main`).
 
 ## Branches
 
 - `main` — live (Pages deployt automatisch)
+- `8thwall-image-targets` — Tracking auf 8th Wall Image Targets (Open-Source-
+  Engine, selbst gehostet). Nicht gemerged; am Handy braucht ein Branch-Test
+  einen eigenen HTTPS-Host (Pages served nur main). Vor dem Merge: Engine-
+  Dateien in `vendor/8thwall/` vorhanden (Bazel-Build, s. dortige README),
+  Gerätetest per `?stats`.
 - `pruefstand` — Strategie E: `?record` / `?replay` / `?metrics`
   (Session-Aufnahme am Gerät, Replay + Vergleichszahlen am Desktop).
   Noch nicht gemerged; `?record` braucht HTTPS = erst nach Merge am Handy nutzbar.
@@ -160,12 +170,17 @@ Vanilla ES-Module, GitHub Pages (served NUR `main`).
 ## Tracking-Architektur
 
 ```
-MindAR-Controller (Vision ~15–30 Hz)
-  └─ anchor.group.matrix (roh, pixel-skaliert: Scale ≈ Target-px-Breite)
-       └─ PoseStabilizer.tick() (jeden Render-Frame, js/poseStabilizer.js)
-            └─ stabRoot (geglättet; trägt Figur — NICHT unter anchor.group!)
+8th Wall XrController (xr-tracking.js) → reality.imagefound/imageupdated/imagelost
+  └─ anchor.matrix (main.js: Kamera⁻¹ × Bildpose, Scale = Kartenbreite; Gruppe
+     außerhalb der Szene — Ersatz für MindARs anchor.group)
+       └─ PoseStabilizer.tick() (jeden Frame im onUpdate des Pipeline-Moduls)
+            └─ stabRoot (geglättet, KIND DER KAMERA; trägt Figur)
                  └─ worldRoot (Karten-Frame: rot.x=+90°, scale=1/SCENE.cardWidth)
+Rendern: XR8.Threejs.onRender (buildExperience({render:false}))
 ```
+
+(main/MindAR: `anchor.group.matrix` roh pixel-skaliert, stabRoot auf Szenen-
+Ebene, `renderer.setAnimationLoop` — Rest identisch.)
 
 PoseStabilizer: Einheiten-Normierung auf Kartenbreiten → NaN-Guard →
 **Scale-Lock** (Scale strukturell konstant; >10 % Abweichung = Fehl-Homographie
@@ -188,10 +203,10 @@ Delta vor) als Prediction + Verlust-Brücke.
 
 ## Aktuelle Kern-Werte (config.js, Build 13)
 
-- `CAM`: 960×540 via **getUserMedia-Wrap** in main.js (MindAR hat keinen
-  Auflösungs-Parameter; `ideal`-Constraints, `?res=WxH` / `?res=0`),
-  `maxPixelRatio: 2` (GPU-Luft für tfjs-Tracker). 1280×720 riss bei
-  Karten-Bewegung ab (Vision-Hz zu tief) — am Gerät verifiziert.
+- `CAM`: unter 8th Wall wählt die Engine die Auflösung selbst (Constraint-
+  Leiter mit Retry) — `width/height` und `?res=` ohne Wirkung; `maxPixelRatio: 2`
+  gilt weiter (Canvas-Pixelgröße in main.js). (main/MindAR: 960×540 per
+  getUserMedia-Wrap.)
 - `STAB`: `minCutoff 0.1` · `beta 10` (gated) · `rotMinCutoff 0.5` ·
   `rotBeta 4` · `minSpeed 0.04` · `minAngSpeed 0.09` · `scaleOutlier 0.1` ·
   `filterMinCF 0.01` (MindAR-intern; 0.001 ließ die interne Pose so
@@ -215,14 +230,19 @@ Delta vor) als Prediction + Verlust-Brücke.
 
 ## Gotchas
 
-- mindar-image-three legt IMMER einen CSS3DRenderer-Layer an, der Pointer-
-  Events schluckt → wird in main.js auf `pointerEvents:none` gesetzt.
-- MindARs interner One-Euro filtert die 16 Matrix-Elemente elementweise —
-  bei unseren Werten faktisch Pass-Through; Haupt-Glättung ist der
-  PoseStabilizer. Elementweises Filtern erzeugt nicht-starre Matrizen →
-  Grund für den Scale-Lock.
-- MindAR schätzt das Kamera-FOV nur (Quelle für systematisches Kipp-Wobble —
-  siehe Strategie A3).
+- 8th Wall: `disableWorldTracking: true` MUSS vor `XrController.pipelineModule()`
+  und `XR8.run()` stehen. `XR8.Threejs` verlangt `window.THREE` (dieselbe
+  Instanz wie die Importmap). `renderer.setSize` der Engine schreibt Pixelmaße
+  als Inline-CSS → `#xr-canvas` hat `width/height: 100% !important`.
+- 8th Wall: `reality.imageupdated` feuert nur bei geänderter Pose → der
+  Stabilizer sieht unveränderte Frames als „stale" (wie MindAR). `detail.scale`
+  gilt pro Track als konstant (Scale-Lock-Annahme, am Gerät prüfen).
+- 8th-Wall-Target ist immer ein 3:4-Crop (zentriert, volle Kartenbreite);
+  eigener Crop muss die Kartenbreite behalten (Skalierung!).
+- (main/MindAR) mindar-image-three legt IMMER einen CSS3DRenderer-Layer an, der
+  Pointer-Events schluckt → `pointerEvents:none`; MindARs elementweiser Matrix-
+  Filter erzeugt nicht-starre Matrizen → Grund für den Scale-Lock; MindAR
+  schätzt das Kamera-FOV nur (Kipp-Wobble, Strategie A3).
 - iOS: Gyro-Permission MUSS in der Start-Geste angefragt werden (vor allen
   awaits); Safari cached JS aggressiv → Build-Check in ?stats nutzen. Achtung:
   Safari cached JEDE Datei einzeln (Pages: max-age 600) — `version.js` kann
