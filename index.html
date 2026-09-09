@@ -140,8 +140,32 @@
       <p class="perm-text perm-text--small">Das Kamerabild bleibt auf deinem Handy — es wird weder übertragen noch gespeichert.</p>
       <button id="permReload"><span class="px-title">Neu laden</span></button>
     </div>
+
+    <!-- Vorabprüfung (Production-Härtung 2026-09-09): In-App-Browser, kein
+         HTTPS, keine Kamera-API, kein WebAssembly oder — per Inline-Skript
+         unten — kein ES-Modul-Support. Befüllt von js/preflight.js bzw. dem
+         Inline-Skript; sichtbar über body.preflight-blocked. Der Start-Button
+         bleibt in diesem Fall deaktiviert. -->
+    <div class="perm-screen pf-screen" id="preflightScreen">
+      <p class="perm-title px-title" id="pfTitle">Bitte im Browser öffnen</p>
+      <p class="perm-text" id="pfText"></p>
+      <input class="pf-url" id="pfUrl" type="text" readonly value="" aria-label="Link zur App" />
+      <button id="pfCopy"><span class="px-title">Link kopieren</span></button>
+    </div>
   </div>
 
+  <!-- Klassisches Skript (KEIN Modul, ES5): Browser ohne ES-Modul-Support
+       (vor iOS 11 / Chrome 61) führen js/main.js nie aus — der Splash bliebe
+       ohne Knopf stehen. Hier bekommt so ein Gerät den Hinweis-Bildschirm.
+       `noModule` gibt es genau in den Browsern, die Module können. -->
+  <script>
+    if (!("noModule" in HTMLScriptElement.prototype)) {
+      document.getElementById("pfText").textContent =
+        "Dein Browser ist zu alt für diese App. Aktualisiere ihn oder öffne den Link in einem aktuellen Safari (iPhone) bzw. Chrome (Android).";
+      document.getElementById("pfUrl").value = location.href;
+      document.body.className += " preflight-blocked";
+    }
+  </script>
   <script type="module" src="./js/main.js"></script>
 </body>
 </html>

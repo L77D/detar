@@ -49,6 +49,7 @@ import { PoseStabilizer } from "./poseStabilizer.js";
 import { GyroFusion } from "./gyroFusion.js";
 import { sound } from "./sound.js";
 import { buildSupport } from "./supportUI.js";
+import { preflight, showPreflightScreen } from "./preflight.js";
 
 const params = new URLSearchParams(location.search);
 const DESKTOP_MODE = params.has("desktop");
@@ -84,6 +85,15 @@ let gyro = null; // GyroFusion — wird in der START-Geste angelegt (iOS-Permiss
    Splash befüllen + Start-Button freigeben, sobald Tuning + Font geladen sind.
    -------------------------------------------------------------------------- */
 async function boot() {
+  // Vorabprüfung (2026-09-09): In-App-Browser / kein HTTPS / keine Kamera-API /
+  // kein WASM → Hinweis-Bildschirm statt Fehler nach dem Klick; Button bleibt
+  // aus. Test: ?preflight=inapp|nocam|insecure|nowasm (s. js/preflight.js).
+  const blocked = preflight(params.get("preflight"));
+  if (blocked) {
+    el("cardName").textContent = card.profession;
+    showPreflightScreen(blocked);
+    return;
+  }
   // tuning.json nur in Tuning-Sessions holen (?dev oder ?tuning) — im Normalfall
   // gibt es die Datei nicht, alle Werte sind Defaults in config.js (2026-09-09).
   if (DEV_MODE || params.has("tuning")) await loadTuning();

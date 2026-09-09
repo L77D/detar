@@ -436,7 +436,9 @@ body.launched .splash { display: none; }
   background-color: var(--d-blau);
   text-align: center;
 }
-body.camera-denied .perm-screen { display: flex; }
+body.camera-denied #permScreen { display: flex; }
+/* Vorabprüfung (2026-09-09): gleicher Baukasten, eigener Schalter */
+body.preflight-blocked #preflightScreen { display: flex; }
 .perm-title {
   font-family: var(--d-font);
   font-size: 40px;
@@ -453,7 +455,8 @@ body.camera-denied .perm-screen { display: flex; }
   max-width: 330px;
 }
 .perm-text--small { font-size: 12px; opacity: 0.8; }
-#permReload {
+#permReload,
+#pfCopy {
   width: 250px;
   height: 72px;
   box-sizing: border-box;
@@ -467,7 +470,8 @@ body.camera-denied .perm-screen { display: flex; }
   align-items: center;
   justify-content: center;
 }
-#permReload > span {
+#permReload > span,
+#pfCopy > span {
   font-family: var(--d-font);
   font-size: 36px;
   line-height: 0.69;
@@ -475,7 +479,24 @@ body.camera-denied .perm-screen { display: flex; }
   color: #fff;
   padding-top: 5px;
 }
-#permReload:active { transform: translate(-6px, 5px); box-shadow: -3px 3px 0 var(--d-schwarz); }
+#permReload:active,
+#pfCopy:active { transform: translate(-6px, 5px); box-shadow: -3px 3px 0 var(--d-schwarz); }
+/* Link als selektierbares Textfeld (Fallback fürs Kopieren ohne Clipboard-API) */
+.pf-url {
+  width: 100%;
+  max-width: 330px;
+  box-sizing: border-box;
+  font-family: var(--d-font-support);
+  font-size: 12px;
+  color: var(--d-schwarz);
+  background: #fff;
+  border: 3px solid var(--d-schwarz);
+  border-radius: 0;
+  padding: 8px 10px;
+  text-align: center;
+  -webkit-user-select: text;
+  user-select: text;
+}
 
 /* ============================================================================
    FEINSCHLIFF (2026-09-04, seit Build 22 live; bis 2026-09-09 hinter body.lokal):
